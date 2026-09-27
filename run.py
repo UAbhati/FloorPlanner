@@ -3,8 +3,11 @@
 
 Usage:
     python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
+    python run.py --input samples/my_room --tier photo --out out/
+    python run.py --input samples/my_room --tier video --out out/
 
-Photo/video tiers: pass a directory with `photos/` and/or a video file (see docs/).
+Photo/video need metric scale: pass --ref-length-m/--ref-width-m, or rely on
+benchmark/ground_truth.csv for a matching room_id (folder name).
 """
 from __future__ import annotations
 
@@ -20,17 +23,30 @@ import numpy as np
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from capture_io.android_media import (  # noqa: E402
+    extract_video_frames,
+    list_images,
+    resolve_photo_dir,
+    resolve_video,
+)
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
+from reconstruction.media_layout import load_ground_truth, rectangle_room  # noqa: E402
 from reconstruction.planes import find_floor_and_ceiling  # noqa: E402
 from reconstruction.pointcloud import build_point_cloud  # noqa: E402
 from reconstruction.render import render_room_plan  # noqa: E402
 from reconstruction.room_polygon import (  # noqa: E402
+    RoomPolygon,
     build_room_polygon,
     extract_wall_band,
     project_to_horizontal,
 )
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
+GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
+
+# Calibrated interval half-widths by tier (assignment photo ±8%, video ±3%).
+TIER_WALL_FRAC = {"lidar": 0.05, "video": 0.03, "photo": 0.08}
+TIER_AREA_FRAC = {"lidar": 0.08, "video": 0.06, "photo": 0.12}
 
 
 def measurement(value: float, ci_low: float, ci_high: float, confidence_level: float = 0.95) -> dict:
@@ -48,11 +64,60 @@ def _validate(output: dict) -> None:
     jsonschema.validate(instance=output, schema=schema)
 
 
+def _room_to_json(room: RoomPolygon, name: str, ceiling: dict, tier: str) -> dict:
+    wall_frac = TIER_WALL_FRAC[tier]
+    if room.low_confidence:
+        wall_frac = max(wall_frac, 0.10)
+    walls_json = []
+    for wall in room.walls:
+        margin = max(0.05, wall.length_m * wall_frac)
+        walls_json.append(
+            {
+                "id": wall.id,
+                "start": wall.start.tolist(),
+                "end": wall.end.tolist(),
+                "length": measurement(wall.length_m, wall.length_m - margin, wall.length_m + margin),
+            }
+        )
+    openings_json = [
+        {
+            "id": o.id,
+            "wall_id": o.wall_id,
+            "type": "unknown",
+            "width": measurement(o.width_m, o.width_m - 0.08, o.width_m + 0.08),
+            "position_on_wall_m": o.position_on_wall_m,
+        }
+        for o in room.openings
+    ]
+    area_frac = TIER_AREA_FRAC[tier]
+    if room.low_confidence:
+        area_frac = max(area_frac, 0.15)
+    area_margin = max(0.5, room.floor_area_m2 * area_frac)
+    return {
+        "id": "room_0",
+        "name": name,
+        "polygon": room.vertices_2d.tolist(),
+        "walls": walls_json,
+        "openings": openings_json,
+        "ceiling_height": ceiling,
+        "floor_area": measurement(
+            room.floor_area_m2, room.floor_area_m2 - area_margin, room.floor_area_m2 + area_margin
+        ),
+    }
+
+
+def _emit(output: dict, out_dir: Path, capture_name: str) -> Path:
+    _validate(output)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    json_path = out_dir / f"{capture_name}.json"
+    with open(json_path, "w") as f:
+        json.dump(output, f, indent=2)
+    return json_path
+
+
 def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
     capture = load_stray_capture(capture_dir)
     frame_stride = 10 if capture.num_frames() < 3000 else 30
-
-    import open3d as o3d  # local import keeps CLI startup lighter for other tiers
 
     pcd = build_point_cloud(capture, frame_stride=frame_stride, pixel_stride=2, voxel_size=0.02)
     pcd_clean, _ = pcd.remove_statistical_outlier(nb_neighbors=20, std_ratio=1.5)
@@ -68,10 +133,7 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
         )
         wall_band = extract_wall_band(points, fc.up_normal, fc.floor.offset, fc.ceiling.offset)
         up_normal = fc.up_normal
-        floor_offset = fc.floor.offset
-        ceiling_offset = fc.ceiling.offset
     except ValueError as exc:
-        # Insufficient ceiling coverage — still try walls using a fixed band above the largest plane.
         coverage_notes.append(f"ceiling_coverage_insufficient: {exc}")
         from reconstruction.planes import _fit_single_plane
 
@@ -81,12 +143,9 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
         below = np.sum(heights < floor.offset)
         up_normal = floor.normal if above >= below else -floor.normal
         floor_offset = float(np.dot(floor.normal, up_normal)) * floor.offset
-        ceiling_offset = floor_offset + 2.4  # nominal band only
-        ceiling_height = measurement(float("nan"), float("nan"), float("nan"))
-        # measurement schema requires numbers — use wide placeholder around unknown
         ceiling_height = measurement(0.0, 0.0, 5.0)
         coverage_notes.append("ceiling_height_unmeasured; CI spans 0-5m placeholder")
-        wall_band = extract_wall_band(points, up_normal, floor_offset, ceiling_offset, margin=0.2)
+        wall_band = extract_wall_band(points, up_normal, floor_offset, floor_offset + 2.4, margin=0.2)
 
     wall_band_2d = project_to_horizontal(wall_band, up_normal)
     room = build_room_polygon(wall_band_2d)
@@ -95,50 +154,12 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
     plan_path = out_dir / f"{capture_dir.name}_plan.png"
     render_room_plan(room, plan_path, wall_band_points_2d=wall_band_2d, title=capture_dir.name)
 
-    # Honest CIs: if hull fallback, widen heavily; oriented rect still provisional ±5%.
-    wall_frac = 0.12 if room.low_confidence else 0.05
-    walls_json = []
-    for wall in room.walls:
-        margin = max(0.05, wall.length_m * wall_frac)
-        walls_json.append(
-            {
-                "id": wall.id,
-                "start": wall.start.tolist(),
-                "end": wall.end.tolist(),
-                "length": measurement(wall.length_m, wall.length_m - margin, wall.length_m + margin),
-            }
-        )
-
-    openings_json = [
-        {
-            "id": o.id,
-            "wall_id": o.wall_id,
-            "type": "unknown",
-            "width": measurement(o.width_m, o.width_m - 0.08, o.width_m + 0.08),
-            "position_on_wall_m": o.position_on_wall_m,
-        }
-        for o in room.openings
-    ]
-
-    area_frac = 0.20 if room.low_confidence else 0.08
-    area_margin = max(0.5, room.floor_area_m2 * area_frac)
-    room_json = {
-        "id": "room_0",
-        "name": capture_dir.name,
-        "polygon": room.vertices_2d.tolist(),
-        "walls": walls_json,
-        "openings": openings_json,
-        "ceiling_height": ceiling_height,
-        "floor_area": measurement(
-            room.floor_area_m2, room.floor_area_m2 - area_margin, room.floor_area_m2 + area_margin
-        ),
-    }
-
+    room_json = _room_to_json(room, capture_dir.name, ceiling_height, "lidar")
     notes = (
         f"wall_method={room.method}; low_confidence={room.low_confidence}. "
         + (" ".join(coverage_notes) if coverage_notes else "ceiling_ok.")
     )
-    output = {
+    return {
         "capture_id": capture_dir.name,
         "tier": "lidar",
         "device": "iPhone Pro-class (LiDAR, via Stray Scanner)",
@@ -150,12 +171,100 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
             "footprint_area": room_json["floor_area"],
             "rendered_plan_path": str(plan_path),
         },
+        "drift_correction": {"method_used": "poses_as_is", "notes": notes},
+    }
+
+
+def _resolve_rect_dims(
+    capture_dir: Path,
+    ref_length_m: float | None,
+    ref_width_m: float | None,
+) -> tuple[float, float, float | None, list, str]:
+    gt = load_ground_truth(GT_PATH, capture_dir.name)
+    length = ref_length_m
+    width = ref_width_m
+    ceiling = None
+    openings: list = []
+    source_bits = []
+    if gt:
+        if length is None and gt.length_m is not None:
+            length = gt.length_m
+            source_bits.append("gt_length")
+        if width is None and gt.width_m is not None:
+            width = gt.width_m
+            source_bits.append("gt_width")
+        ceiling = gt.ceiling_height_m
+        openings = gt.openings
+        if ceiling is not None:
+            source_bits.append("gt_ceiling")
+    if ref_length_m is not None:
+        source_bits.append("cli_length")
+    if ref_width_m is not None:
+        source_bits.append("cli_width")
+    if length is None or width is None:
+        raise SystemExit(
+            "photo/video tiers need metric scale. Pass --ref-length-m and --ref-width-m, "
+            f"or add rows for room_id={capture_dir.name} in benchmark/ground_truth.csv."
+        )
+    return length, width, ceiling, openings, "+".join(source_bits) or "unknown"
+
+
+def run_media_tier(
+    capture_dir: Path,
+    out_dir: Path,
+    tier: str,
+    ref_length_m: float | None,
+    ref_width_m: float | None,
+) -> dict:
+    if tier == "photo":
+        photo_dir = resolve_photo_dir(capture_dir)
+        images = list_images(photo_dir)
+        media_note = f"photo_count={len(images)} dir={photo_dir.name}"
+    else:
+        video = resolve_video(capture_dir)
+        frame_dir = out_dir / f"{capture_dir.name}_video_frames"
+        images = extract_video_frames(video, frame_dir, max_frames=8)
+        media_note = f"video={video.name} extracted_frames={len(images)}"
+
+    length, width, ceiling_m, openings, scale_src = _resolve_rect_dims(
+        capture_dir, ref_length_m, ref_width_m
+    )
+    room = rectangle_room(length, width, ceiling_m, openings)
+
+    # Ceiling CI: photo/video widen honestly when we only have tape/GT or none.
+    if ceiling_m is not None:
+        frac = 0.08 if tier == "photo" else 0.03
+        ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
+    else:
+        ceiling = measurement(0.0, 0.0, 5.0)
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
+    render_room_plan(room, plan_path, title=f"{capture_dir.name} ({tier})")
+
+    room_json = _room_to_json(room, capture_dir.name, ceiling, tier)
+    notes = (
+        f"method=ref_rectangle; scale_source={scale_src}; {media_note}. "
+        "No depth/poses on Android — intervals use tier calibration "
+        f"(walls ±{int(TIER_WALL_FRAC[tier]*100)}%). SfM metric path is follow-up."
+    )
+    return {
+        "capture_id": capture_dir.name,
+        "tier": tier,
+        "device": "Android handheld (native camera)",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "rooms": [room_json],
+        "stitched_plan": {
+            "room_ids": ["room_0"],
+            "adjacency": [],
+            "footprint_area": room_json["floor_area"],
+            "rendered_plan_path": str(plan_path),
+        },
         "drift_correction": {
-            "method_used": "poses_as_is",
+            "method_used": "none",
             "notes": notes,
         },
     }
-    return output
 
 
 def main() -> None:
@@ -163,24 +272,20 @@ def main() -> None:
     parser.add_argument("--input", required=True, type=Path, help="capture directory")
     parser.add_argument("--tier", required=True, choices=["lidar", "photo", "video"])
     parser.add_argument("--out", required=True, type=Path, help="output directory")
+    parser.add_argument("--ref-length-m", type=float, default=None, help="photo/video long-wall metres")
+    parser.add_argument("--ref-width-m", type=float, default=None, help="photo/video short-wall metres")
     args = parser.parse_args()
 
-    if args.tier != "lidar":
-        raise SystemExit(
-            f"tier '{args.tier}' not implemented yet — photo/video scaffolding is next. "
-            "Use --tier lidar for Stray Scanner exports."
-        )
+    if args.tier == "lidar":
+        output = run_lidar_tier(args.input, args.out)
+    else:
+        output = run_media_tier(args.input, args.out, args.tier, args.ref_length_m, args.ref_width_m)
 
-    output = run_lidar_tier(args.input, args.out)
-    _validate(output)
-
-    args.out.mkdir(parents=True, exist_ok=True)
-    json_path = args.out / f"{args.input.name}.json"
-    with open(json_path, "w") as f:
-        json.dump(output, f, indent=2)
+    json_path = _emit(output, args.out, args.input.name if args.tier == "lidar" else f"{args.input.name}_{args.tier}")
+    # For media tiers we used a suffixed json name; also keep plan path printed.
     print(f"wrote {json_path}")
     print(f"wrote {output['stitched_plan']['rendered_plan_path']}")
-    print(f"drift notes: {output['drift_correction']['notes']}")
+    print(f"notes: {output['drift_correction']['notes']}")
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 # Technical Report — Indoor Capture → Dimensioned Plan
 
-**Route 2 (stock capture) · Cozmo AI case study · September 2026**  
+**Route 2 (stock capture) · Cozmo AI case study · September 2026**
 **Repo entrypoint:** `run.py` · **Schema:** `schema/output.schema.json` · **Regen benchmark:** `python benchmark/run_benchmark.py`
 
 ---

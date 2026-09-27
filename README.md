@@ -30,6 +30,8 @@ Photo/video try **COLMAP** first (scaled to the long-wall reference). If reconst
 
 ## Docs
 - [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — what the walker installs and how they walk
+- [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) — requirement → artifact → status
+- [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — fix-loop (regenerate with `python fix_loop/regenerate.py`)
 - [memory.md](memory.md) — major design decisions
 - [NOTES.md](NOTES.md) — debug narrative
 - [schema/output.schema.json](schema/output.schema.json) — output contract

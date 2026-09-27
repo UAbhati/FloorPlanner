@@ -30,6 +30,7 @@ from capture_io.android_media import (  # noqa: E402
     resolve_video,
 )
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
+from reconstruction.damage import detect_damage_from_photos, empty_damage_for_lidar  # noqa: E402
 from reconstruction.media_layout import load_ground_truth, rectangle_room  # noqa: E402
 from reconstruction.planes import (  # noqa: E402
     find_floor,
@@ -45,7 +46,6 @@ from reconstruction.room_polygon import (  # noqa: E402
     project_to_horizontal,
 )
 from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
-
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -70,7 +70,15 @@ def _validate(output: dict) -> None:
     jsonschema.validate(instance=output, schema=schema)
 
 
-def _room_to_json(room: RoomPolygon, name: str, ceiling: dict, tier: str) -> dict:
+def _room_to_json(
+    room: RoomPolygon,
+    name: str,
+    ceiling: dict,
+    tier: str,
+    *,
+    damage_regions: list | None = None,
+    scope_line_items: list | None = None,
+) -> dict:
     wall_frac = TIER_WALL_FRAC[tier]
     if room.low_confidence:
         wall_frac = max(wall_frac, 0.10)
@@ -99,7 +107,7 @@ def _room_to_json(room: RoomPolygon, name: str, ceiling: dict, tier: str) -> dic
     if room.low_confidence:
         area_frac = max(area_frac, 0.15)
     area_margin = max(0.5, room.floor_area_m2 * area_frac)
-    return {
+    out = {
         "id": "room_0",
         "name": name,
         "polygon": room.vertices_2d.tolist(),
@@ -110,6 +118,11 @@ def _room_to_json(room: RoomPolygon, name: str, ceiling: dict, tier: str) -> dic
             room.floor_area_m2, room.floor_area_m2 - area_margin, room.floor_area_m2 + area_margin
         ),
     }
+    if damage_regions is not None:
+        out["damage_regions"] = damage_regions
+    if scope_line_items is not None:
+        out["scope_line_items"] = scope_line_items
+    return out
 
 
 def _emit(output: dict, out_dir: Path, capture_name: str) -> Path:
@@ -121,7 +134,7 @@ def _emit(output: dict, out_dir: Path, capture_name: str) -> Path:
     return json_path
 
 
-def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
+def run_lidar_tier(capture_dir: Path, out_dir: Path, *, wall_method: str = "auto") -> dict:
     capture = load_stray_capture(capture_dir)
     frame_stride = 10 if capture.num_frames() < 3000 else 30
 
@@ -158,13 +171,16 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
         wall_band = extract_wall_band(points, up_normal, floor_fit.offset, band_hi, margin=0.2)
 
     wall_band_2d = project_to_horizontal(wall_band, up_normal)
-    room = build_room_polygon(wall_band_2d)
+    room = build_room_polygon(wall_band_2d, method=wall_method)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{capture_dir.name}_plan.png"
     render_room_plan(room, plan_path, wall_band_points_2d=wall_band_2d, title=capture_dir.name)
 
     room_json = _room_to_json(room, capture_dir.name, ceiling_height, "lidar")
+    damage, scope = empty_damage_for_lidar(room)
+    room_json["damage_regions"] = damage
+    room_json["scope_line_items"] = scope
     notes = (
         f"wall_method={room.method}; low_confidence={room.low_confidence}. "
         + (" ".join(coverage_notes) if coverage_notes else "ceiling_ok.")
@@ -286,6 +302,9 @@ def run_media_tier(
     render_room_plan(room, plan_path, title=f"{capture_dir.name} ({tier})")
 
     room_json = _room_to_json(room, capture_dir.name, ceiling, tier)
+    damage, scope = detect_damage_from_photos(images, room)
+    room_json["damage_regions"] = damage
+    room_json["scope_line_items"] = scope
     notes = (
         f"{method_note}; {media_note}. "
         f"Wall CIs use tier calibration (±{int(TIER_WALL_FRAC[tier]*100)}%)."
@@ -321,10 +340,16 @@ def main() -> None:
         action="store_true",
         help="skip COLMAP and use ref-rectangle layout for photo/video",
     )
+    parser.add_argument(
+        "--wall-method",
+        choices=["auto", "hull", "polar"],
+        default="auto",
+        help="LiDAR wall polygon method (hull = fix-loop before baseline)",
+    )
     args = parser.parse_args()
 
     if args.tier == "lidar":
-        output = run_lidar_tier(args.input, args.out)
+        output = run_lidar_tier(args.input, args.out, wall_method=args.wall_method)
     else:
         output = run_media_tier(
             args.input,

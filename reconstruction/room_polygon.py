@@ -175,16 +175,34 @@ def detect_openings_on_wall(
     return openings
 
 
-def build_room_polygon(wall_band_points_2d: np.ndarray) -> RoomPolygon:
-    fit = fit_room_walls(wall_band_points_2d)
-    if fit is not None:
-        vertices = fit.vertices_2d
-        method = fit.method
-        low_confidence = fit.method.endswith("_large") or fit.floor_area_m2 > 40.0
-    else:
+def build_room_polygon(
+    wall_band_points_2d: np.ndarray,
+    *,
+    method: str = "auto",
+) -> RoomPolygon:
+    """Build room polygon.
+
+    method:
+      - "auto": polar/oriented-rect fit, hull fallback
+      - "hull": force convex hull (used for fix-loop *before* baseline)
+      - "polar": polar fit only; raises if fit returns None
+    """
+    if method == "hull":
         vertices = fit_room_polygon(wall_band_points_2d)
-        method = "convex_hull"
+        chosen = "convex_hull"
         low_confidence = True
+    else:
+        fit = fit_room_walls(wall_band_points_2d)
+        if fit is not None:
+            vertices = fit.vertices_2d
+            chosen = fit.method
+            low_confidence = fit.method.endswith("_large") or fit.floor_area_m2 > 40.0
+        elif method == "polar":
+            raise ValueError("polar wall fit failed and method=polar forbids hull fallback")
+        else:
+            vertices = fit_room_polygon(wall_band_points_2d)
+            chosen = "convex_hull"
+            low_confidence = True
 
     walls = compute_walls(vertices)
     openings = []
@@ -196,6 +214,6 @@ def build_room_polygon(wall_band_points_2d: np.ndarray) -> RoomPolygon:
         walls=walls,
         openings=openings,
         floor_area_m2=area,
-        method=method,
+        method=chosen,
         low_confidence=low_confidence,
     )

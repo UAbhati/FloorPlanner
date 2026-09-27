@@ -75,6 +75,8 @@ def rectangle_room(
     width_m: float,
     ceiling_height_m: float | None,
     openings: list[tuple[str, float, str]] | None = None,
+    *,
+    low_confidence: bool = False,
 ) -> RoomPolygon:
     """Axis-aligned rectangle in 2D: length along u, width along v."""
     vertices = np.array(
@@ -93,22 +95,30 @@ def rectangle_room(
         Wall(id="wall_3", start=vertices[3], end=vertices[0], length_m=width_m),  # west
     ]
     opening_objs: list[Opening] = []
-    # Map cardinal wall names from GT onto rectangle wall ids.
     cardinal_to_wall = {"south": "wall_0", "east": "wall_1", "north": "wall_2", "west": "wall_3"}
     if openings:
-        for i, (cardinal, width, _notes) in enumerate(openings):
+        # Group by wall so multiple unknown-position openings are spaced, not stacked.
+        by_wall: dict[str, list[tuple[float, str]]] = {}
+        for cardinal, width, notes in openings:
             wid = cardinal_to_wall.get(cardinal, cardinal)
+            by_wall.setdefault(wid, []).append((width, notes))
+
+        for wid, items in by_wall.items():
             wall = next(w for w in walls if w.id == wid)
-            # Unknown along-wall position → place at mid-wall for rendering only.
-            pos = max(0.0, (wall.length_m - width) / 2)
-            opening_objs.append(
-                Opening(id=f"{wid}_opening_{i}", wall_id=wid, position_on_wall_m=pos, width_m=width)
-            )
+            n = len(items)
+            for i, (width, _notes) in enumerate(items):
+                # Evenly space openings along the wall with margin from corners.
+                slot = (i + 1) / (n + 1)
+                center = wall.length_m * slot
+                pos = max(0.05, min(center - width / 2, wall.length_m - width - 0.05))
+                opening_objs.append(
+                    Opening(id=f"{wid}_opening_{i}", wall_id=wid, position_on_wall_m=pos, width_m=width)
+                )
     return RoomPolygon(
         vertices_2d=vertices,
         walls=walls,
         openings=opening_objs,
         floor_area_m2=length_m * width_m,
         method="ref_rectangle",
-        low_confidence=True,
+        low_confidence=low_confidence,
     )

@@ -31,7 +31,11 @@ from capture_io.android_media import (  # noqa: E402
 )
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
 from reconstruction.media_layout import load_ground_truth, rectangle_room  # noqa: E402
-from reconstruction.planes import find_floor_and_ceiling  # noqa: E402
+from reconstruction.planes import (  # noqa: E402
+    find_floor,
+    find_floor_and_ceiling,
+    rough_height_above_floor,
+)
 from reconstruction.pointcloud import build_point_cloud  # noqa: E402
 from reconstruction.render import render_room_plan  # noqa: E402
 from reconstruction.room_polygon import (  # noqa: E402
@@ -135,17 +139,21 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path) -> dict:
         up_normal = fc.up_normal
     except ValueError as exc:
         coverage_notes.append(f"ceiling_coverage_insufficient: {exc}")
-        from reconstruction.planes import _fit_single_plane
-
-        floor = _fit_single_plane(points)
-        heights = points @ floor.normal
-        above = np.sum(heights > floor.offset)
-        below = np.sum(heights < floor.offset)
-        up_normal = floor.normal if above >= below else -floor.normal
-        floor_offset = float(np.dot(floor.normal, up_normal)) * floor.offset
-        ceiling_height = measurement(0.0, 0.0, 5.0)
-        coverage_notes.append("ceiling_height_unmeasured; CI spans 0-5m placeholder")
-        wall_band = extract_wall_band(points, up_normal, floor_offset, floor_offset + 2.4, margin=0.2)
+        up_normal, floor_fit = find_floor(points)
+        rough = rough_height_above_floor(points, up_normal, floor_fit.offset)
+        if np.isfinite(rough) and 1.5 <= rough <= 4.5:
+            # Weak prior from point-height percentile — not a fitted ceiling plane.
+            ceiling_height = measurement(rough, max(0.5, rough - 1.0), rough + 1.0)
+            coverage_notes.append(
+                f"ceiling_height_rough_percentile={rough:.2f}m; wide CI (±1m); not a plane fit"
+            )
+            band_hi = floor_fit.offset + rough
+        else:
+            # Last resort: unknown height — report midpoint of plausible residential range.
+            ceiling_height = measurement(2.5, 1.5, 3.5)
+            coverage_notes.append("ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement")
+            band_hi = floor_fit.offset + 2.4
+        wall_band = extract_wall_band(points, up_normal, floor_fit.offset, band_hi, margin=0.2)
 
     wall_band_2d = project_to_horizontal(wall_band, up_normal)
     room = build_room_polygon(wall_band_2d)
@@ -229,7 +237,8 @@ def run_media_tier(
     length, width, ceiling_m, openings, scale_src = _resolve_rect_dims(
         capture_dir, ref_length_m, ref_width_m
     )
-    room = rectangle_room(length, width, ceiling_m, openings)
+    # Tape/GT or CLI refs are known metric — not low-confidence geometry.
+    room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
 
     # Ceiling CI: photo/video widen honestly when we only have tape/GT or none.
     if ceiling_m is not None:

@@ -40,6 +40,7 @@ RANSAC_SEED = 42  # fixed for run-to-run determinism (the repeatability gate dep
 MIN_PLANE_INLIERS = 500
 NORMAL_PARALLEL_COS_THRESHOLD = 0.9  # ~25 degrees, used to sanity-check the ceiling normal against the floor's
 CEILING_MIN_CLEARANCE_M = 1.8  # exclude furniture/mid-height clutter before fitting the ceiling plane
+CEILING_RETRY_CLEARANCE_M = 1.2  # softer retry when the strict band finds no parallel plane
 
 
 @dataclass
@@ -81,39 +82,79 @@ class FloorCeilingResult:
     ceiling: PlaneFit
 
 
-def find_floor_and_ceiling(points: np.ndarray) -> FloorCeilingResult:
+def find_floor(points: np.ndarray) -> tuple[np.ndarray, PlaneFit]:
+    """Fit the dominant floor plane; return (up_normal, floor_fit)."""
     floor = _fit_single_plane(points)
-
-    # Orient the normal so "up" points toward the majority of the remaining
-    # points (the floor should have most of the room's volume above it, not
-    # below - this also fixes the arbitrary sign RANSAC returns).
     heights = points @ floor.normal
     above = np.sum(heights > floor.offset)
     below = np.sum(heights < floor.offset)
     up_normal = floor.normal if above >= below else -floor.normal
     floor_offset = float(np.dot(floor.normal, up_normal)) * floor.offset
+    floor_fit = PlaneFit(
+        normal=up_normal,
+        offset=floor_offset,
+        inlier_count=floor.inlier_count,
+        residual_std_m=floor.residual_std_m,
+    )
+    return up_normal, floor_fit
 
-    ceiling_candidates = points[points @ up_normal > floor_offset + CEILING_MIN_CLEARANCE_M]
+
+def _fit_ceiling_above(
+    points: np.ndarray,
+    up_normal: np.ndarray,
+    floor_offset: float,
+    clearance_m: float,
+) -> PlaneFit:
+    ceiling_candidates = points[points @ up_normal > floor_offset + clearance_m]
     if len(ceiling_candidates) < MIN_PLANE_INLIERS:
         raise ValueError(
-            f"only {len(ceiling_candidates)} points above floor+{CEILING_MIN_CLEARANCE_M}m - "
+            f"only {len(ceiling_candidates)} points above floor+{clearance_m}m - "
             "capture likely doesn't cover the ceiling"
         )
-
     ceiling = _fit_single_plane(ceiling_candidates)
     cos_angle = abs(float(np.dot(ceiling.normal, up_normal)))
     if cos_angle < NORMAL_PARALLEL_COS_THRESHOLD:
         raise ValueError(
-            f"best plane above floor+{CEILING_MIN_CLEARANCE_M}m isn't parallel to the floor "
+            f"best plane above floor+{clearance_m}m isn't parallel to the floor "
             f"(cos angle {cos_angle:.2f} < {NORMAL_PARALLEL_COS_THRESHOLD}) - likely a wall or clutter, not a ceiling"
         )
-
-    # Re-express with a consistent sign/offset along up_normal.
-    floor_fit = PlaneFit(normal=up_normal, offset=floor_offset, inlier_count=floor.inlier_count, residual_std_m=floor.residual_std_m)
     ceiling_offset = float(np.dot(ceiling.normal, up_normal)) * ceiling.offset
-    ceiling_fit = PlaneFit(normal=up_normal, offset=ceiling_offset, inlier_count=ceiling.inlier_count, residual_std_m=ceiling.residual_std_m)
+    return PlaneFit(
+        normal=up_normal,
+        offset=ceiling_offset,
+        inlier_count=ceiling.inlier_count,
+        residual_std_m=ceiling.residual_std_m,
+    )
 
-    return FloorCeilingResult(up_normal=up_normal, floor=floor_fit, ceiling=ceiling_fit)
+
+def find_floor_and_ceiling(points: np.ndarray) -> FloorCeilingResult:
+    up_normal, floor_fit = find_floor(points)
+
+    last_err: Exception | None = None
+    for clearance in (CEILING_MIN_CLEARANCE_M, CEILING_RETRY_CLEARANCE_M):
+        try:
+            ceiling_fit = _fit_ceiling_above(points, up_normal, floor_fit.offset, clearance)
+            height = abs(ceiling_fit.offset - floor_fit.offset)
+            # Soft clearance can latch onto tabletops; reject non-ceiling heights.
+            if height < 1.7:
+                last_err = ValueError(
+                    f"candidate ceiling height {height:.2f}m < 1.7m (likely furniture, not ceiling)"
+                )
+                continue
+            return FloorCeilingResult(up_normal=up_normal, floor=floor_fit, ceiling=ceiling_fit)
+        except ValueError as exc:
+            last_err = exc
+    assert last_err is not None
+    raise last_err
+
+
+def rough_height_above_floor(points: np.ndarray, up_normal: np.ndarray, floor_offset: float) -> float:
+    """Weak height prior from the 90th percentile of points above the floor (not a ceiling plane)."""
+    heights = points @ up_normal - floor_offset
+    above = heights[heights > 0.3]
+    if len(above) < 100:
+        return float("nan")
+    return float(np.percentile(above, 90))
 
 
 def ceiling_height_measurement(points: np.ndarray, confidence_level: float = 0.95) -> dict:

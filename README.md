@@ -42,13 +42,13 @@ python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align off --ou
 ```
 
 ## Docs
+- [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) — **≤6-page technical report** (architecture, tiers, drift, fix loop)
 - [docs/WALKIN_CHECKLIST.md](docs/WALKIN_CHECKLIST.md) — **30% walk-in**
 - [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
 - [benchmark/REPORT.md](benchmark/REPORT.md) — gate/timing tables (regen with script)
 - [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — **10%** vs Polycam/Magicplan
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — **25%** fix loop
-- [memory.md](memory.md) — design decisions
 
 ## Honest limits
 - LiDAR: polar outline + oriented rectangle; `oriented_rect_large` = doorway bleed / multi-space.

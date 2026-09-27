@@ -2,6 +2,29 @@
 
 Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON + top-down plan.
 
+## Fastest ways to see this work (no setup, or ~2 min)
+
+**Note on samples:** `samples/` is not in this repo — the 3 Stray LiDAR captures are yours (given to every candidate, not ours to redistribute), and `my_room`/`my_bedroom`/`my_kitchen` are photos/video of the author's own home, kept private. See [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) for the full disclosure. What follows still gets you to a live, working pipeline in minutes.
+
+1. **Zero setup — browse committed outputs.** Every number in this repo is backed by a committed JSON + rendered plan PNG, not just prose:
+   - [`fix_loop/before/`](fix_loop/before/) vs [`fix_loop/after/`](fix_loop/after/) — hull-baseline vs the shipped Manhattan wall-detection fix, same two Stray captures
+   - [`benchmark/h2h/our_room_a|b|c/`](benchmark/h2h/) — our photo **and video** tier output per room (hall/bedroom/kitchen)
+   - [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/) — the 3-room stitch, **both** `drift_on` and `drift_off` (the ablation the spec scores)
+   - [`benchmark/REPORT.md`](benchmark/REPORT.md), [`benchmark/HEAD_TO_HEAD.md`](benchmark/HEAD_TO_HEAD.md) — the full tables these files back
+
+2. **~2 min, live run, zero privacy concern — your own Stray samples.** Drop the same 3 folders you already gave every candidate (`single_room/`, `single_scan_floor/`, `single_scan_with_ceiling/`) into `samples/`, then:
+   ```bash
+   source .venv/bin/activate
+   python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
+   ```
+   This is the actual LiDAR code path — the same one that runs cold at the walk-in test.
+
+3. **~1 min, live run, any room, zero data needed from us.** The photo tier's whole promise is "any picture in, results out" — prove it with your own phone:
+   ```bash
+   mkdir -p /tmp/anyroom && # drop 2-8 phone photos of any room in there
+   python run.py --input /tmp/anyroom --tier photo --ref-length-m <tape a wall> --ref-width-m <tape the other> --out out/
+   ```
+
 ## Setup (macOS, ~5–15 min on a clean machine)
 
 ```bash

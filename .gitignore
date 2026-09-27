@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 .DS_Store
 out/
+# Extracted video frames are raw imagery (same privacy class as source video/photos).
+*_video_frames/
+*_rgb_frames/
 *.egg-info/
 benchmark/runs/
 

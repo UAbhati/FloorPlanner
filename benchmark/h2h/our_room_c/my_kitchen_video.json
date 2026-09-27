@@ -1,0 +1,252 @@
+{
+  "capture_id": "my_kitchen",
+  "tier": "video",
+  "device": "Android/iPhone handheld (native camera)",
+  "generated_at": "2026-09-27T12:49:23.660845+00:00",
+  "rooms": [
+    {
+      "id": "room_0",
+      "name": "my_kitchen",
+      "polygon": [
+        [
+          0.0,
+          0.0
+        ],
+        [
+          2.25,
+          0.0
+        ],
+        [
+          2.25,
+          1.66
+        ],
+        [
+          0.0,
+          1.66
+        ]
+      ],
+      "walls": [
+        {
+          "id": "wall_0",
+          "start": [
+            0.0,
+            0.0
+          ],
+          "end": [
+            2.25,
+            0.0
+          ],
+          "length": {
+            "value_m": 2.25,
+            "ci_low_m": 2.1825,
+            "ci_high_m": 2.3175,
+            "confidence_level": 0.95
+          }
+        },
+        {
+          "id": "wall_1",
+          "start": [
+            2.25,
+            0.0
+          ],
+          "end": [
+            2.25,
+            1.66
+          ],
+          "length": {
+            "value_m": 1.66,
+            "ci_low_m": 1.6099999999999999,
+            "ci_high_m": 1.71,
+            "confidence_level": 0.95
+          }
+        },
+        {
+          "id": "wall_2",
+          "start": [
+            2.25,
+            1.66
+          ],
+          "end": [
+            0.0,
+            1.66
+          ],
+          "length": {
+            "value_m": 2.25,
+            "ci_low_m": 2.1825,
+            "ci_high_m": 2.3175,
+            "confidence_level": 0.95
+          }
+        },
+        {
+          "id": "wall_3",
+          "start": [
+            0.0,
+            1.66
+          ],
+          "end": [
+            0.0,
+            0.0
+          ],
+          "length": {
+            "value_m": 1.66,
+            "ci_low_m": 1.6099999999999999,
+            "ci_high_m": 1.71,
+            "confidence_level": 0.95
+          }
+        }
+      ],
+      "openings": [
+        {
+          "id": "wall_1_opening_0",
+          "wall_id": "wall_1",
+          "type": "unknown",
+          "width": {
+            "value_m": 0.77,
+            "ci_low_m": 0.6900000000000001,
+            "ci_high_m": 0.85,
+            "confidence_level": 0.95
+          },
+          "position_on_wall_m": 0.44499999999999995
+        }
+      ],
+      "ceiling_height": {
+        "value_m": 2.58,
+        "ci_low_m": 2.5026,
+        "ci_high_m": 2.6574,
+        "confidence_level": 0.95
+      },
+      "floor_area": {
+        "value_m": 3.735,
+        "ci_low_m": 3.235,
+        "ci_high_m": 4.234999999999999,
+        "confidence_level": 0.95
+      },
+      "damage_regions": [
+        {
+          "id": "damage_stain_0_9",
+          "surface_id": "wall_0",
+          "class": "water_stain",
+          "extent_m2": {
+            "value_m": 0.07910747643762263,
+            "ci_low_m": 0.029107476437622626,
+            "ci_high_m": 0.12910747643762263,
+            "confidence_level": 0.95
+          },
+          "concealed_flag": false,
+          "concealed_rule": null
+        },
+        {
+          "id": "damage_stain_1_3",
+          "surface_id": "wall_1",
+          "class": "water_stain",
+          "extent_m2": {
+            "value_m": 0.07571957594778868,
+            "ci_low_m": 0.025719575947788675,
+            "ci_high_m": 0.12571957594778868,
+            "confidence_level": 0.95
+          },
+          "concealed_flag": false,
+          "concealed_rule": null
+        },
+        {
+          "id": "damage_stain_2_2",
+          "surface_id": "wall_2",
+          "class": "water_stain",
+          "extent_m2": {
+            "value_m": 0.1929409328960432,
+            "ci_low_m": 0.0964704664480216,
+            "ci_high_m": 0.2894113993440648,
+            "confidence_level": 0.95
+          },
+          "concealed_flag": false,
+          "concealed_rule": null
+        },
+        {
+          "id": "damage_stain_3_4",
+          "surface_id": "wall_3",
+          "class": "water_stain",
+          "extent_m2": {
+            "value_m": 0.868996475642407,
+            "ci_low_m": 0.4344982378212035,
+            "ci_high_m": 1.3034947134636106,
+            "confidence_level": 0.95
+          },
+          "concealed_flag": false,
+          "concealed_rule": null
+        },
+        {
+          "id": "damage_concealed_wall_1_opening_0",
+          "surface_id": "wall_1",
+          "class": "concealed_moisture_risk",
+          "extent_m2": {
+            "value_m": 0.0,
+            "ci_low_m": 0.0,
+            "ci_high_m": 0.1,
+            "confidence_level": 0.95
+          },
+          "concealed_flag": true,
+          "concealed_rule": "concealed_behind_opening"
+        }
+      ],
+      "scope_line_items": [
+        {
+          "id": "scope_damage_stain_0_9",
+          "surface_id": "wall_0",
+          "damage_region_id": "damage_stain_0_9",
+          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
+          "quantity": 0.079,
+          "unit": "m2"
+        },
+        {
+          "id": "scope_damage_stain_1_3",
+          "surface_id": "wall_1",
+          "damage_region_id": "damage_stain_1_3",
+          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
+          "quantity": 0.076,
+          "unit": "m2"
+        },
+        {
+          "id": "scope_damage_stain_2_2",
+          "surface_id": "wall_2",
+          "damage_region_id": "damage_stain_2_2",
+          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
+          "quantity": 0.193,
+          "unit": "m2"
+        },
+        {
+          "id": "scope_damage_stain_3_4",
+          "surface_id": "wall_3",
+          "damage_region_id": "damage_stain_3_4",
+          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
+          "quantity": 0.869,
+          "unit": "m2"
+        },
+        {
+          "id": "scope_damage_concealed_wall_1_opening_0",
+          "surface_id": "wall_1",
+          "damage_region_id": "damage_concealed_wall_1_opening_0",
+          "description": "Probe opening jambs for concealed moisture (rule: concealed_behind_opening)",
+          "quantity": 1,
+          "unit": "each"
+        }
+      ]
+    }
+  ],
+  "stitched_plan": {
+    "room_ids": [
+      "room_0"
+    ],
+    "adjacency": [],
+    "footprint_area": {
+      "value_m": 3.735,
+      "ci_low_m": 3.235,
+      "ci_high_m": 4.234999999999999,
+      "confidence_level": 0.95
+    },
+    "rendered_plan_path": "benchmark/h2h/our_room_c/my_kitchen_video_plan.png"
+  },
+  "drift_correction": {
+    "method_used": "none",
+    "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
+  }
+}

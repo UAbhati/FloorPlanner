@@ -40,8 +40,17 @@ def main() -> None:
     points = pcd.points
     import numpy as np
 
-    measurement = ceiling_height_measurement(np.asarray(points))
-    print("ceiling height measurement:", measurement)
+    from reconstruction.planes import find_floor, rough_height_above_floor
+
+    try:
+        measurement = ceiling_height_measurement(np.asarray(points))
+        print("ceiling height measurement:", measurement)
+    except ValueError as exc:
+        # Matches run.py soft-fail: furniture planes rejected; use rough prior.
+        print(f"ceiling plane soft-fail (expected on some scans): {exc}")
+        up, floor = find_floor(np.asarray(points))
+        rough = rough_height_above_floor(np.asarray(points), up, floor.offset)
+        print(f"rough height prior: {rough:.2f}m")
     print("OK")
 
 

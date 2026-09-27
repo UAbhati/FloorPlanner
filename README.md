@@ -54,4 +54,4 @@ python run.py --stitch-gt my_room,bedroom --tier photo --drift-align off --out o
 - LiDAR: polar outline + oriented rectangle; `oriented_rect_large` = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
 - Android photo/video: COLMAP often too thin → tape-scaled rectangle with tier CIs.
-- Multi-room stitch / drift ablation: not shipped (documented FAIL in benchmark report).
+- Multi-room stitch: GT hall+bedroom via `--stitch-gt` (opening-aligned); not independent multi-room LiDAR.

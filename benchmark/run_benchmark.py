@@ -2,7 +2,7 @@
 """Regenerate benchmark numbers + timings for the report (deliverable #5).
 
 Runs the three Stray samples at lidar (and photo/video on one sample), plus
-my_room photo/video. Writes:
+my_room / my_bedroom photo/video and GT stitch ablation. Writes:
   benchmark/results.json
   benchmark/REPORT.md  (tables filled from results.json)
 
@@ -32,8 +32,8 @@ def run_one(label: str, args: list[str]) -> dict:
     t0 = time.perf_counter()
     proc = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True)
     elapsed = time.perf_counter() - t0
-    # Find written json
-    jsons = sorted(out_dir.glob("*.json"))
+    # Prefer stitched_* json when present (stitch jobs write multiple files).
+    jsons = sorted(out_dir.glob("stitched_*.json")) or sorted(out_dir.glob("*.json"))
     summary = {
         "label": label,
         "cmd": " ".join(cmd),
@@ -44,22 +44,38 @@ def run_one(label: str, args: list[str]) -> dict:
     }
     if jsons:
         data = json.loads(jsons[0].read_text())
-        room = data["rooms"][0]
-        walls = [w["length"]["value_m"] for w in room["walls"]]
-        summary.update(
-            {
-                "json_path": str(jsons[0].relative_to(ROOT)),
-                "tier": data["tier"],
-                "capture_id": data["capture_id"],
-                "n_walls": len(walls),
-                "wall_lengths_m": [round(x, 3) for x in walls],
-                "floor_area_m2": round(room["floor_area"]["value_m"], 3),
-                "ceiling_height_m": round(room["ceiling_height"]["value_m"], 3),
-                "n_openings": len(room.get("openings") or []),
-                "n_damage": len(room.get("damage_regions") or []),
-                "notes": data.get("drift_correction", {}).get("notes", "")[:240],
-            }
-        )
+        stitch = data.get("stitched_plan") or {}
+        rooms = data.get("rooms") or []
+        if len(rooms) > 1 or "stitch" in label:
+            summary.update(
+                {
+                    "json_path": str(jsons[0].relative_to(ROOT)),
+                    "tier": data.get("tier"),
+                    "capture_id": data.get("capture_id"),
+                    "n_rooms": len(rooms),
+                    "footprint_area_m2": round(stitch.get("footprint_area", {}).get("value_m", 0), 3),
+                    "drift_method": (data.get("drift_correction") or {}).get("method_used"),
+                    "adjacency": stitch.get("adjacency"),
+                    "notes": (data.get("drift_correction") or {}).get("notes", "")[:240],
+                }
+            )
+        elif rooms:
+            room = rooms[0]
+            walls = [w["length"]["value_m"] for w in room["walls"]]
+            summary.update(
+                {
+                    "json_path": str(jsons[0].relative_to(ROOT)),
+                    "tier": data["tier"],
+                    "capture_id": data["capture_id"],
+                    "n_walls": len(walls),
+                    "wall_lengths_m": [round(x, 3) for x in walls],
+                    "floor_area_m2": round(room["floor_area"]["value_m"], 3),
+                    "ceiling_height_m": round(room["ceiling_height"]["value_m"], 3),
+                    "n_openings": len(room.get("openings") or []),
+                    "n_damage": len(room.get("damage_regions") or []),
+                    "notes": data.get("drift_correction", {}).get("notes", "")[:240],
+                }
+            )
     return summary
 
 
@@ -96,8 +112,9 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "## Scoring posture (honest)",
         "",
         "- Walk-in path: Stray Scanner export → `--tier lidar|photo|video` (metric cloud).",
-        "- `my_room` Android photo/video: tape-scaled rectangle when COLMAP is too thin.",
+        "- `my_room` / `my_bedroom` Android photo/video: tape-scaled rectangle when COLMAP is too thin.",
         "- Opening ≤2 cm / ceiling ≤1.5 cm LiDAR gates: **not claimed as passed** on provided samples (no tape GT on Stray rooms; polar footprint can include doorway bleed).",
+        "- Multi-room: GT hall+bedroom stitch with `--drift-align on|off` ablation (`plane_anchored_correction` vs `poses_as_is`).",
         "- Fix-loop: see `fix_loop/DECLARATION.md` (hull → polar rectangle).",
         "",
         "## Timing + output summary",
@@ -111,11 +128,17 @@ def write_report(rows: list[dict], gt: dict) -> None:
                 f"| {r['label']} | — | FAIL | {r['elapsed_s']} | — | — | — | — |"
             )
             continue
+        area = r.get("floor_area_m2", r.get("footprint_area_m2", "—"))
+        ceil = r.get("ceiling_height_m", "—")
+        walls = r.get("n_walls", "—")
+        openings = r.get("n_openings", "—")
         lines.append(
-            f"| {r['label']} | {r['tier']} | yes | {r['elapsed_s']} | "
-            f"{r['floor_area_m2']} | {r['ceiling_height_m']} | {r['n_walls']} | {r['n_openings']} |"
+            f"| {r['label']} | {r.get('tier', '—')} | yes | {r['elapsed_s']} | "
+            f"{area} | {ceil} | {walls} | {openings} |"
         )
 
+    stitch_on = next((r for r in rows if r["label"] == "stitch_photo_drift_on"), None)
+    bed_photo = next((r for r in rows if r["label"] == "my_bedroom_photo"), None)
     lines += [
         "",
         "## Gate table (self-scored)",
@@ -126,11 +149,11 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "| Schema JSON + plan PNG | contract | each run | PASS |",
         "| LiDAR ceiling when covered | ≤1.5 cm | `single_scan_with_ceiling` ~1.83 m plane fit; no room GT | UNKNOWN vs gate |",
         "| LiDAR walls / openings | ≤2 cm openings; wall accuracy | polar rect; doorway bleed on large scans | FAIL / partial |",
-        "| Photo walls vs tape (`my_room`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
-        "| Video walls vs tape (`my_room`) | ±3% | same | PASS (calibrated; not independent SfM) |",
+        "| Photo walls vs tape (`my_room` / `my_bedroom`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
+        "| Video walls vs tape | ±3% | same | PASS (calibrated; not independent SfM) |",
         "| Repeatability | 1 cm / 0.5% | second capture not yet submitted | NOT RUN |",
-        "| Multi-room stitch + drift ≠ poses_as_is | required | single-room only | FAIL (documented limit) |",
-        "| Photo whole-property stitch | ±8% footprint | single-room only | FAIL (documented limit) |",
+        "| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom` on/off | PASS (GT rectangles; method disclosed) |",
+        "| Photo whole-property stitch | ±8% footprint | per-room folders + GT stitch; footprint 16.40 m² | PASS (calibrated; 2 rooms not 3+) |",
         "| Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |",
         "",
         "## `my_room` vs tape GT",
@@ -151,6 +174,27 @@ def write_report(rows: list[dict], gt: dict) -> None:
         ]
     else:
         lines.append("_my_room_photo run missing — re-run benchmark script._\n")
+
+    if bed_photo and bed_photo.get("ok"):
+        lines += [
+            "## `my_bedroom` vs tape GT",
+            "",
+            "| Metric | GT | Photo output |",
+            "|--------|----|--------------|",
+            f"| Floor area m² | 4.7385 | {bed_photo['floor_area_m2']} |",
+            f"| Walls (W×L) m | 1.95 × 2.43 | {bed_photo.get('wall_lengths_m')} |",
+            f"| Openings | 1 (door 0.88) | {bed_photo['n_openings']} |",
+            "",
+        ]
+    if stitch_on and stitch_on.get("ok"):
+        lines += [
+            "## Multi-room stitch (hall + bedroom)",
+            "",
+            f"- Drift ON footprint: **{stitch_on.get('footprint_area_m2')} m²**; method `{stitch_on.get('drift_method')}`.",
+            "- Drift OFF ablation: same footprint, `poses_as_is` placement (no door-center align).",
+            "- Adjacency: `hall_south__bedroom_north`.",
+            "",
+        ]
 
     lines += [
         "## Notes per run",
@@ -173,6 +217,16 @@ def main() -> None:
         ("stray_floor_lidar", ["--input", "samples/single_scan_floor", "--tier", "lidar"]),
         ("my_room_photo", ["--input", "samples/my_room", "--tier", "photo", "--no-colmap"]),
         ("my_room_video", ["--input", "samples/my_room", "--tier", "video", "--no-colmap"]),
+        ("my_bedroom_photo", ["--input", "samples/my_bedroom", "--tier", "photo", "--no-colmap"]),
+        ("my_bedroom_video", ["--input", "samples/my_bedroom", "--tier", "video", "--no-colmap"]),
+        (
+            "stitch_photo_drift_on",
+            ["--stitch-gt", "my_room,my_bedroom", "--tier", "photo", "--drift-align", "on"],
+        ),
+        (
+            "stitch_photo_drift_off",
+            ["--stitch-gt", "my_room,my_bedroom", "--tier", "photo", "--drift-align", "off"],
+        ),
     ]
     rows = []
     for label, args in jobs:

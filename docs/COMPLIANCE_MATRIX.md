@@ -13,8 +13,9 @@
 | Fix loop | [fix_loop/](../fix_loop/) | Done |
 | Benchmark report (regen) | [benchmark/REPORT.md](../benchmark/REPORT.md) | Done |
 | Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | Hall + bedroom |
+| Bedroom photo/video capture | [samples/my_bedroom/](../samples/my_bedroom/) | Done |
 | Head-to-head vs Magicplan | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | Done (Android; method disclosed) |
-| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-gt` | Done (GT rectangles; 2 rooms) |
+| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-gt my_room,my_bedroom` | Done (GT rectangles; 2 rooms) |
 | Drift ≠ poses_as_is | `--drift-align on` → `plane_anchored_correction`; off ablation | Done for stitch path |
 | Repeatability second capture | — | **NOT RUN** |
 | Technical report ≤6 pages | — | **Not started** |

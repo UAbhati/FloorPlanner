@@ -4,5 +4,8 @@ __pycache__/
 .DS_Store
 out/
 *.egg-info/
-samples/
+# Large Stray / phone captures stay local; keep sample READMEs for protocol.
+samples/*
+!samples/*/
+!samples/*/README.md
 benchmark/runs/

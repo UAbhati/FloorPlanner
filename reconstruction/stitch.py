@@ -69,7 +69,7 @@ def stitch_two_rectangles(
     bedroom: RoomPolygon,
     *,
     hall_id: str = "my_room",
-    bedroom_id: str = "bedroom",
+    bedroom_id: str = "my_bedroom",
     shared_width_m: float = 0.88,
     align_openings: bool = True,
 ) -> StitchResult:

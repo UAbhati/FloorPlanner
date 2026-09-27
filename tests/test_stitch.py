@@ -12,16 +12,16 @@ from reconstruction.stitch import stitch_from_gt  # noqa: E402
 
 def main() -> None:
     gt = REPO / "benchmark" / "ground_truth.csv"
-    on = stitch_from_gt(gt, ["my_room", "bedroom"], align_openings=True)
-    off = stitch_from_gt(gt, ["my_room", "bedroom"], align_openings=False)
+    on = stitch_from_gt(gt, ["my_room", "my_bedroom"], align_openings=True)
+    off = stitch_from_gt(gt, ["my_room", "my_bedroom"], align_openings=False)
 
     assert on.method == "plane_anchored_correction", on.method
     assert off.method == "poses_as_is", off.method
     assert len(on.adjacency) == 1
     assert on.footprint_area_m2 == off.footprint_area_m2
 
-    bed_on = next(p for p in on.rooms if p.room_id == "bedroom")
-    bed_off = next(p for p in off.rooms if p.room_id == "bedroom")
+    bed_on = next(p for p in on.rooms if p.room_id == "my_bedroom")
+    bed_off = next(p for p in off.rooms if p.room_id == "my_bedroom")
     # Alignment should move bedroom in u relative to ablation.
     assert abs(bed_on.translation[0] - bed_off.translation[0]) > 0.05, (
         bed_on.translation,

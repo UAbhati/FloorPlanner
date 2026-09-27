@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-27T11:19:21.286745+00:00",
+  "generated_at": "2026-09-27T11:33:22.718147+00:00",
   "runs": [
     {
       "label": "stray_ceiling_lidar",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar",
       "ok": true,
-      "elapsed_s": 4.28,
+      "elapsed_s": 4.46,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling_plan.png\nnotes: wall_method=oriented_rect_large; low_confidence=True. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json",
@@ -28,7 +28,7 @@
       "label": "stray_ceiling_photo",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier photo --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo",
       "ok": true,
-      "elapsed_s": 11.26,
+      "elapsed_s": 11.7,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo_plan.png\nnotes: method=stray_metric_cloud; tier=photo; wall_method=oriented_rect_large; low_confidence=True. ceiling_ok. Wall CIs widened to \u00b18% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json",
@@ -51,7 +51,7 @@
       "label": "stray_ceiling_video",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier video --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video",
       "ok": true,
-      "elapsed_s": 11.38,
+      "elapsed_s": 11.31,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video_plan.png\nnotes: method=stray_metric_cloud; tier=video; wall_method=oriented_rect_large; low_confidence=True. ceiling_ok. Wall CIs widened to \u00b13% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json",
@@ -97,7 +97,7 @@
       "label": "stray_floor_lidar",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_floor --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar",
       "ok": true,
-      "elapsed_s": 2.66,
+      "elapsed_s": 2.61,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor_plan.png\nnotes: wall_method=oriented_rect_large; low_confidence=True. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_floor_lidar/single_scan_floor.json",
@@ -120,7 +120,7 @@
       "label": "my_room_photo",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo",
       "ok": true,
-      "elapsed_s": 0.81,
+      "elapsed_s": 0.79,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=17 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_photo/my_room_photo.json",
@@ -143,7 +143,7 @@
       "label": "my_room_video",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video",
       "ok": true,
-      "elapsed_s": 1.2,
+      "elapsed_s": 1.18,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_video/my_room_video.json",
@@ -161,6 +161,96 @@
       "n_openings": 2,
       "n_damage": 5,
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
+    },
+    {
+      "label": "my_bedroom_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_bedroom --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo",
+      "ok": true,
+      "elapsed_s": 0.8,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo/my_bedroom_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo/my_bedroom_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/my_bedroom_photo/my_bedroom_photo.json",
+      "tier": "photo",
+      "capture_id": "my_bedroom",
+      "n_walls": 4,
+      "wall_lengths_m": [
+        2.43,
+        1.95,
+        2.43,
+        1.95
+      ],
+      "floor_area_m2": 4.739,
+      "ceiling_height_m": 2.5,
+      "n_openings": 1,
+      "n_damage": 5,
+      "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%)."
+    },
+    {
+      "label": "my_bedroom_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_bedroom --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video",
+      "ok": true,
+      "elapsed_s": 1.13,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video/my_bedroom_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video/my_bedroom_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/my_bedroom_video/my_bedroom_video.json",
+      "tier": "video",
+      "capture_id": "my_bedroom",
+      "n_walls": 4,
+      "wall_lengths_m": [
+        2.43,
+        1.95,
+        2.43,
+        1.95
+      ],
+      "floor_area_m2": 4.739,
+      "ceiling_height_m": 2.5,
+      "n_openings": 1,
+      "n_damage": 5,
+      "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
+    },
+    {
+      "label": "stitch_photo_drift_on",
+      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align on --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on",
+      "ok": true,
+      "elapsed_s": 0.79,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_photo_on.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_photo_drift_on_plan.png\nnotes: opening_aligned shared_width\u22480.88m; \u0394u=0.392m on south/north walls; ablation_pair=use --drift-align off/on; tier=photo\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_photo_on.json",
+      "tier": "photo",
+      "capture_id": "my_room+my_bedroom",
+      "n_rooms": 2,
+      "footprint_area_m2": 16.403,
+      "drift_method": "plane_anchored_correction",
+      "adjacency": [
+        {
+          "room_a": "my_room",
+          "room_b": "my_bedroom",
+          "shared_wall_id": "hall_south__bedroom_north"
+        }
+      ],
+      "notes": "opening_aligned shared_width\u22480.88m; \u0394u=0.392m on south/north walls; ablation_pair=use --drift-align off/on; tier=photo"
+    },
+    {
+      "label": "stitch_photo_drift_off",
+      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align off --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off",
+      "ok": true,
+      "elapsed_s": 0.78,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_photo_off.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_photo_drift_off_plan.png\nnotes: no opening alignment (ablation); bedroom left-aligned under hall south wall; ablation_pair=use --drift-align off/on; tier=photo\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_photo_off.json",
+      "tier": "photo",
+      "capture_id": "my_room+my_bedroom",
+      "n_rooms": 2,
+      "footprint_area_m2": 16.403,
+      "drift_method": "poses_as_is",
+      "adjacency": [
+        {
+          "room_a": "my_room",
+          "room_b": "my_bedroom",
+          "shared_wall_id": "hall_south__bedroom_north"
+        }
+      ],
+      "notes": "no opening alignment (ablation); bedroom left-aligned under hall south wall; ablation_pair=use --drift-align off/on; tier=photo"
     }
   ],
   "my_room_gt": {

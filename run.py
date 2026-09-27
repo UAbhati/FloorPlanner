@@ -478,7 +478,7 @@ def main() -> None:
         "--stitch-gt",
         type=str,
         default=None,
-        help="comma-separated GT room_ids to stitch (e.g. my_room,bedroom)",
+        help="comma-separated GT room_ids to stitch (e.g. my_room,my_bedroom)",
     )
     parser.add_argument(
         "--drift-align",

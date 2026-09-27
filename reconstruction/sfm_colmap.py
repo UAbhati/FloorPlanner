@@ -108,15 +108,23 @@ def run_colmap(image_paths: list[Path], workspace: Path) -> np.ndarray:
     sparse_dir = workspace / "sparse"
     sparse_dir.mkdir(exist_ok=True)
 
-    # Reuse a previous successful model in this workspace when present.
+    # Invalidate cache when the input image set changes (count + names).
+    manifest = workspace / "image_manifest.txt"
+    fingerprint = "\n".join(f"{p.name}:{p.stat().st_size}" for p in sorted(image_paths, key=lambda x: x.name))
     existing = sparse_dir / "0" / "points3D.txt"
-    if existing.is_file():
+    if existing.is_file() and manifest.is_file() and manifest.read_text() == fingerprint:
         try:
             return _parse_points3d_txt(existing)
         except SfMError:
             pass
+    else:
+        # Stale workspace from a previous capture — clear sparse model.
+        if sparse_dir.exists():
+            shutil.rmtree(sparse_dir)
+        sparse_dir.mkdir(exist_ok=True)
 
     _stage_images(image_paths, image_dir)
+    manifest.write_text(fingerprint)
 
     if db_path.exists():
         db_path.unlink()

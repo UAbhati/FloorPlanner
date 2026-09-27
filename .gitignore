@@ -6,15 +6,17 @@ out/
 *.egg-info/
 benchmark/runs/
 
-# Raw captures stay local (not in git).
+# Raw captures stay local (not in git): company-provided Stray samples
+# (not ours to redistribute) and our own room captures (privacy — these are
+# photos/video of the owner's home). Ground truth CSV + JSON outputs +
+# rendered plans (the actual evidence) ARE tracked; only the raw
+# photos/video/depth logs are excluded. Per-room README.md stays tracked.
 samples/*
-samples/*/
-samples/*/README.md
+!samples/*/
+samples/*/*
+!samples/*/README.md
+!samples/STRAY_SAMPLES.md
 
-# Working notes / process docs — keep local unless explicitly asked to ship.
+# Working notes / process docs — genuinely local scratch, not deliverables.
 memory.md
 NOTES.md
-docs/WALKIN_CHECKLIST.md
-docs/COMPLIANCE_MATRIX.md
-docs/CAPTURE_PROTOCOL.md
-benchmark/HEAD_TO_HEAD.md

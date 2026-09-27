@@ -33,7 +33,7 @@ capture_io/          Stray loader; Android photo/video resolve + ffmpeg frames
 reconstruction/
   pointcloud.py      Depth + odometry → metric cloud (confidence-gated)
   planes.py          Two-stage floor / ceiling RANSAC
-  wall_detection.py  Polar outline → oriented rectangle (+ hull baseline)
+  wall_detection.py  Manhattan density-peak rect → polar outline → hull baseline
   room_polygon.py    Walls, openings, floor area
   media_layout.py    GT / tape rectangle for thin photo-video
   sfm_colmap.py      Optional COLMAP metric attempt (≥200-pt gate)
@@ -46,7 +46,7 @@ benchmark/           GT CSV, REPORT, H2H exports, regen script
 fix_loop/           Declaration + regenerable before/after
 ```
 
-**LiDAR path.** Build a voxel-downsampled point cloud → fit floor (largest plane) → fit ceiling only among points ≥ ~1.8 m above floor, reject candidates &lt; 1.7 m (furniture) → extract a mid-height wall band → polar max-radius outline → minimum-area oriented rectangle → gap-based openings on walls → schema JSON + plan PNG. Soft-fail on ceiling: wide residential prior CI and an explicit note, not a silent fake plane.
+**LiDAR path.** Build a voxel-downsampled point cloud → fit floor (largest plane) → fit ceiling only among points ≥ ~1.8 m above floor, reject candidates &lt; 1.7 m (furniture) → extract a mid-height wall band → Manhattan density-peak rectangle (Hough-voted dominant wall direction, then per-axis histogram-mode wall position; falls back to polar max-radius outline, then convex hull) → gap-based openings on walls → schema JSON + plan PNG. Soft-fail on ceiling: wide residential prior CI and an explicit note, not a silent fake plane.
 
 **Photo / video path.** Prefer COLMAP SfM scaled by a reference length when the reconstruction clears an internal point gate. On Android hall/bedroom captures COLMAP is typically too thin; we fall back to a **tape- or GT-anchored axis-aligned rectangle** and widen wall CIs to the tier budget (±8% photo, ±3% video). Stray folders at photo/video tier reuse the **same metric cloud** as LiDAR with those wider CIs — so walk-in can exercise all three tiers from one export.
 
@@ -97,7 +97,7 @@ Footprint is identical (sum of room areas); **adjacency geometry** differs. Adja
 
 **Hall / bedroom vs tape (photo).** Area and wall lengths match GT (ref-rectangle). That is **calibration pass**, not independent SfM. COLMAP on the hall was too thin → fallback documented in run notes (`colmap_fallback` / `--no-colmap` in benchmark jobs).
 
-**LiDAR qualitative.** `single_room` ≈ 35 m² oriented rect; ceiling soft-fails (~1.25 m furniture). `single_scan_floor` ≈ 113 m² and `single_scan_with_ceiling` ≈ 139 m² tagged `oriented_rect_large` (doorway bleed / multi-space). Ceiling plane ≈ 1.83 m when the walk looks up.
+**LiDAR qualitative.** After the round-2 wall-detection fix (§6): `single_room` ≈ 9.9 m² Manhattan rect; ceiling soft-fails (~1.25 m furniture). `single_scan_floor` ≈ 27.0 m² and `single_scan_with_ceiling` ≈ 30.5 m², both `manhattan_rect`, `low_confidence=False` (previously `oriented_rect_large` at 113/139 m²). Cross-checked stable (27–33 m²) across frame_stride 10/20/30, vs. a 111–159 m² swing for the same strides under the old max-radius method. Ceiling plane ≈ 1.83 m when the walk looks up.
 
 **Repeatability.** Second same-tier capture of the same room: **not run** — gate left open.
 
@@ -111,20 +111,20 @@ Footprint is identical (sum of room areas); **adjacency geometry** differs. Adja
 
 **Root cause.** Wall-band points are a **filled** set (furniture + clutter + bleed), not a thin wall ring. Hull = outer envelope of everything seen. Ceiling fit on the same capture was healthy (~1.83 m), isolating the failure to lateral extraction.
 
-**Fix shipped.** Polar max-radius outline → oriented min-area rectangle; oversized results flagged `oriented_rect_large` / `low_confidence`. CLI `--wall-method hull|polar|auto` makes before/after regenerable.
+**Fix shipped (two rounds).** Round 1: polar max-radius outline → oriented min-area rectangle; oversized results flagged `oriented_rect_large` / `low_confidence`. This fixed shape validity but not the bleed — "farthest point per ray" still chases the one stray point down an open doorway, so area went *up* (115→139 m²). Round 2: replaced the primary method with a **Manhattan density-peak rectangle** — Hough-vote the dominant wall direction (not a single noisy line fit), then on each axis take the *histogram-mode* wall position (a real wall is hit repeatedly; doorway bleed is sparse and doesn't win a density peak) and build an axis-aligned box from the two independent per-axis peaks so opposite sides are equal by construction. CLI `--wall-method hull|polar|manhattan|auto` makes every stage regenerable.
 
-| Capture | Before | After |
-|---------|--------|-------|
-| `single_scan_with_ceiling` | hull, 115.2 m², 8 walls | `oriented_rect_large`, 139.3 m², **4 walls**, low_confidence |
-| `single_room` | hull path | `oriented_rect`, ~35 m², **4 walls** |
+| Capture | Hull | Polar rect (round 1) | Manhattan rect (round 2) |
+|---------|------|---|---|
+| `single_scan_with_ceiling` | 115.2 m², 8 walls | `oriented_rect_large`, 139.3 m², 4 walls, low_confidence | `manhattan_rect`, **30.5 m²**, 4 walls, low_confidence=**False** |
+| `single_room` | hull path | `oriented_rect`, ~35 m², 4 walls | `manhattan_rect`, **~9.9 m²**, 4 walls |
 
-**Post-mortem.** On the multi-space sample, area did not shrink — polar still sees adjacent space through openings — but the product is an honest rectangle with an explicit confidence flag instead of a confident irregular hull. Claimed movement: **shape + calibration honesty**, not a false centimetre win. Bundle: `fix_loop/DECLARATION.md`, `fix_loop/before|after/`, `python fix_loop/regenerate.py`.
+**Post-mortem.** Round 1 fixed shape validity (4 equal-side walls) but not the underlying bleed — a partial, honestly-flagged fix. Round 2 targets the actual mechanism (max-radius vs. density-peak) and the area drops ~4–5x with the low-confidence flag clearing; cross-checked stable across frame_stride 10/20/30 (27–33 m² vs. a 111–159 m² swing for the same strides under max-radius). Still **no tape GT on the company Stray samples**, so this is a shape-plausibility and stride-robustness claim, not a claimed pass on the centimetre gate — but it's the piece that runs live at the walk-in test. Bundle: `fix_loop/DECLARATION.md`, `fix_loop/before|after/`, `python fix_loop/regenerate.py`.
 
 ---
 
 ## 7. Known failure modes
 
-1. **Doorway bleed / multi-space walks** → `oriented_rect_large`, inflated area; do not treat as single-room GT.
+1. **Doorway bleed / multi-space walks** → density-peak fit resists it much better than the old max-radius outline (see §6), but still no tape GT on the company Stray samples to confirm centimetre accuracy; do not treat as single-room GT.
 2. **No ceiling tilts** → ceiling soft-fail; residential prior CI, not a plane measurement.
 3. **Furniture planes ~1.2–1.5 m** → rejected as ceiling (&lt; 1.7 m rule).
 4. **Thin COLMAP on phone photos** → tape/GT rectangle required; independent metric photo not claimed.
@@ -154,4 +154,4 @@ Cold walk-in: receive Stray export → run all three `--tier` values → compare
 
 ## 9. Summary
 
-We ship an end-to-end Route 2 pipeline with honest tier intervals, regenerable fix-loop (hull → polar rectangle), opening-anchored stitch with drift ablation, and a tape-calibrated photo/video benchmark plus Magicplan H2H under disclosed methods. Remaining score risk is concentrated in **independent centimetre LiDAR accuracy** (no tape on company scans; bleed on large walks) and **missing repeatability / richer multi-room composition** — not in the ability to run cold on a Stray handoff.
+We ship an end-to-end Route 2 pipeline with honest tier intervals, a two-round regenerable fix-loop (hull → polar rectangle → Manhattan density-peak rectangle), opening-anchored stitch with drift ablation, and a tape-calibrated photo/video benchmark plus Magicplan H2H under disclosed methods. Remaining score risk is concentrated in **independent centimetre LiDAR accuracy** (no tape on company scans, even though wall shape/robustness is now materially better) and **missing repeatability / richer multi-room composition** — not in the ability to run cold on a Stray handoff.

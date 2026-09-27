@@ -183,22 +183,24 @@ def build_room_polygon(
     """Build room polygon.
 
     method:
-      - "auto": polar/oriented-rect fit, hull fallback
+      - "auto": Manhattan density-peak fit -> polar oriented-rect fit -> hull fallback
+      - "manhattan": Manhattan fit only; raises if fit returns None
+      - "polar": polar max-radius fit only; raises if fit returns None
       - "hull": force convex hull (used for fix-loop *before* baseline)
-      - "polar": polar fit only; raises if fit returns None
     """
     if method == "hull":
         vertices = fit_room_polygon(wall_band_points_2d)
         chosen = "convex_hull"
         low_confidence = True
     else:
-        fit = fit_room_walls(wall_band_points_2d)
+        fit_method = "auto" if method not in ("manhattan", "polar") else method
+        fit = fit_room_walls(wall_band_points_2d, method=fit_method)
         if fit is not None:
             vertices = fit.vertices_2d
             chosen = fit.method
             low_confidence = fit.method.endswith("_large") or fit.floor_area_m2 > 40.0
-        elif method == "polar":
-            raise ValueError("polar wall fit failed and method=polar forbids hull fallback")
+        elif method in ("manhattan", "polar"):
+            raise ValueError(f"{method} wall fit failed and method={method} forbids hull fallback")
         else:
             vertices = fit_room_polygon(wall_band_points_2d)
             chosen = "convex_hull"

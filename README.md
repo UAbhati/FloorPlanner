@@ -51,7 +51,7 @@ python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align off --ou
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — **25%** fix loop
 
 ## Honest limits
-- LiDAR: polar outline + oriented rectangle; `oriented_rect_large` = doorway bleed / multi-space.
+- LiDAR: Manhattan density-peak rectangle (Hough angle + per-axis wall-position peak), falls back to polar outline then hull; `*_large` tag = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
 - Android photo/video: COLMAP often too thin → tape-scaled rectangle with tier CIs.
 - Multi-room stitch: GT hall+`my_bedroom` via `--stitch-gt` (opening-aligned); not independent multi-room LiDAR.

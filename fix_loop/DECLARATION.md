@@ -24,17 +24,24 @@ python run.py --input samples/single_scan_with_ceiling --tier lidar \
 
 ## 3. Fix shipped + predicted number
 
-**Fix:** Polar max-radius outline → oriented min-area rectangle (`fit_room_walls`), with oversized footprints tagged `oriented_rect_large` / low_confidence instead of silently trusting a hull. CLI default `--wall-method auto`.
+**Fix (two rounds).**
 
-**Predicted after:** on `single_scan_with_ceiling`, a **4-wall rectangle** (possibly flagged large if the scan spans multi-space); no more irregular 8-vertex hull. On `single_room`, a stable 4-wall rectangle.
+Round 1 (first pass): polar max-radius outline → oriented min-area rectangle (`fit_room_walls`), with oversized footprints tagged `oriented_rect_large` / low_confidence instead of silently trusting a hull. This turned the 8-vertex hull junk into an honest 4-wall rectangle, but "farthest point per ray" still chases the single farthest doorway-bleed point on any ray that looks through an opening — footprint stayed inflated (115 m² → 139 m², *larger*, not smaller).
+
+Round 2 (this fix): replaced the primary method with a **Manhattan density-peak rectangle**. Rasterize the wall-band cloud, Hough-vote for the dominant wall direction (mod 90°) instead of fitting a line to a noisy subset, rotate into that frame, and on each of the 2 axes find the *histogram-mode* wall position in the outer part of each half — a physical wall is hit repeatedly across the whole walk (sharp peak); sparse bleed points past an open doorway are not (flat). Build an axis-aligned box from the 4 independent peak positions and rotate back — opposite sides are equal by construction. Falls back to the round-1 polar rect, then hull, if no dominant angle or peak is confident. CLI: `--wall-method auto|manhattan|polar|hull`.
+
+**Predicted after (round 2):** a materially smaller, still-4-wall footprint on both ceiling scans — no longer chasing bleed through the doorway — checked for stride-robustness (not just a single lucky sample).
 
 **Observed after (regenerated):**
-| Capture | Before | After |
-|---------|--------|-------|
-| `single_scan_with_ceiling` | hull, **115.2 m²**, 8 walls | `oriented_rect_large`, **139.3 m²**, **4 walls**, `low_confidence=True` |
-| `single_room` | (hull path) | `oriented_rect`, **~35 m²**, **4 walls** |
+| Capture | Hull (baseline) | Polar rect (round 1) | Manhattan rect (round 2) |
+|---------|---|---|---|
+| `single_scan_with_ceiling` | 115.2 m², 8-vertex hull | `oriented_rect_large`, **139.3 m²**, low_confidence=True | `manhattan_rect`, **30.5 m²**, low_confidence=**False** |
+| `single_scan_floor` | — | `oriented_rect_large`, **112.9 m²** | `manhattan_rect`, **27.0 m²** |
+| `single_room` | — | `oriented_rect`, **35.1 m²** | `manhattan_rect`, **9.9 m²** |
 
-**Post-mortem:** On the multi-space ceiling sample, area did not shrink — polar outline still sees adjacent space through openings — but the product is now an honest 4-wall rectangle with an explicit large/low-confidence flag instead of a confident-looking irregular hull. That is the gate movement we claim: **shape + confidence calibration**, not a false centimetre win on a multi-room walk.
+Cross-checked at frame_stride 10/20/30 on both ceiling-covered samples: Manhattan area holds in a 27–33 m² band (not the wild 111–159 m² swing polar/hull showed across the same strides) — the density-peak signal, unlike max-radius, doesn't depend on how many points happen to land on stray doorway-bleed rays.
+
+**Post-mortem.** Round 1's prediction ("4 walls, maybe still flagged large") was directionally right but under-ambitious — it fixed shape validity, not the bleed itself. Round 2 fixes the actual root cause (max-radius vs density-peak) and the area movement is real: **~4–5x smaller footprint, `low_confidence` cleared**, gate moves from "shape valid but flagged inflated" toward "plausible single-room rectangle." Still **no tape GT on the company Stray samples**, so this is not a claimed pass on the ≤2 cm opening / wall-accuracy gate — it's a shape-plausibility and stride-robustness win that directly matters for the walk-in test, where LiDAR wall detection runs cold on an unseen room.
 
 Reproduce after:
 ```bash
@@ -51,6 +58,6 @@ python fix_loop/regenerate.py
 
 ## 4. Diff pointer
 
-Readable code diff: `reconstruction/wall_detection.py` (polar outline) + `reconstruction/room_polygon.py` (`build_room_polygon` method switch) + `run.py` (`--wall-method`).
+Readable code diff: `reconstruction/wall_detection.py` (Manhattan density-peak fit + polar outline fallback) + `reconstruction/room_polygon.py` (`build_room_polygon` method switch) + `run.py` (`--wall-method auto|manhattan|polar|hull`).
 
-Git: compare commits around wall extraction fix (`85e305d` and follow-ups) vs earlier hull-only CLI (`1eae41b`).
+Git: compare commits around the wall-extraction fix (`85e305d` and follow-ups) vs the earlier hull-only CLI (`1eae41b`); Manhattan density-peak rewrite is the most recent wall_detection.py commit.

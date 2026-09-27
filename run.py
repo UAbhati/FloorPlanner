@@ -470,7 +470,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--wall-method",
-        choices=["auto", "hull", "polar"],
+        choices=["auto", "hull", "polar", "manhattan"],
         default="auto",
         help="LiDAR wall polygon method (hull = fix-loop before baseline)",
     )

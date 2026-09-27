@@ -2,125 +2,100 @@
   "capture_id": "single_room",
   "tier": "lidar",
   "device": "iPhone Pro-class (LiDAR, via Stray Scanner)",
-  "generated_at": "2026-09-27T07:40:21.190963+00:00",
+  "generated_at": "2026-09-27T12:09:03.898182+00:00",
   "rooms": [
     {
       "id": "room_0",
       "name": "single_room",
       "polygon": [
         [
-          1.354254961013794,
-          5.635359287261963
+          0.9603089429221672,
+          -0.9168531638563315
         ],
         [
-          -2.5447630882263184,
-          0.3250575065612793
+          3.5487121258136147,
+          1.6490598619872614
         ],
         [
-          1.752055048942566,
-          -2.8298239707946777
+          1.6349011344337616,
+          3.579645354031217
         ],
         [
-          5.651073455810547,
-          2.480477809906006
+          -0.9535020484576857,
+          1.0137323281876243
         ]
       ],
       "walls": [
         {
           "id": "wall_0",
           "start": [
-            1.354254961013794,
-            5.635359287261963
+            0.9603089429221672,
+            -0.9168531638563315
           ],
           "end": [
-            -2.5447630882263184,
-            0.3250575065612793
+            3.5487121258136147,
+            1.6490598619872614
           ],
           "length": {
-            "value_m": 6.587992619183253,
-            "ci_low_m": 6.25859298822409,
-            "ci_high_m": 6.917392250142416,
+            "value_m": 3.6446866385735275,
+            "ci_low_m": 3.462452306644851,
+            "ci_high_m": 3.826920970502204,
             "confidence_level": 0.95
           }
         },
         {
           "id": "wall_1",
           "start": [
-            -2.5447630882263184,
-            0.3250575065612793
+            3.5487121258136147,
+            1.6490598619872614
           ],
           "end": [
-            1.752055048942566,
-            -2.8298239707946777
+            1.6349011344337616,
+            3.579645354031217
           ],
           "length": {
-            "value_m": 5.330658799817072,
-            "ci_low_m": 5.064125859826218,
-            "ci_high_m": 5.597191739807926,
+            "value_m": 2.718424700597193,
+            "ci_low_m": 2.582503465567333,
+            "ci_high_m": 2.8543459356270526,
             "confidence_level": 0.95
           }
         },
         {
           "id": "wall_2",
           "start": [
-            1.752055048942566,
-            -2.8298239707946777
+            1.6349011344337616,
+            3.579645354031217
           ],
           "end": [
-            5.651073455810547,
-            2.480477809906006
+            -0.9535020484576857,
+            1.0137323281876243
           ],
           "length": {
-            "value_m": 6.587992830840679,
-            "ci_low_m": 6.258593189298645,
-            "ci_high_m": 6.917392472382713,
+            "value_m": 3.644686638573527,
+            "ci_low_m": 3.4624523066448507,
+            "ci_high_m": 3.8269209705022034,
             "confidence_level": 0.95
           }
         },
         {
           "id": "wall_3",
           "start": [
-            5.651073455810547,
-            2.480477809906006
+            -0.9535020484576857,
+            1.0137323281876243
           ],
           "end": [
-            1.354254961013794,
-            5.635359287261963
+            0.9603089429221672,
+            -0.9168531638563315
           ],
           "length": {
-            "value_m": 5.330659088085745,
-            "ci_low_m": 5.064126133681458,
-            "ci_high_m": 5.597192042490032,
+            "value_m": 2.718424700597193,
+            "ci_low_m": 2.582503465567333,
+            "ci_high_m": 2.8543459356270526,
             "confidence_level": 0.95
           }
         }
       ],
-      "openings": [
-        {
-          "id": "wall_0_opening_0",
-          "wall_id": "wall_0",
-          "type": "unknown",
-          "width": {
-            "value_m": 1.3578305398316628,
-            "ci_low_m": 1.2778305398316627,
-            "ci_high_m": 1.4378305398316629,
-            "confidence_level": 0.95
-          },
-          "position_on_wall_m": 1.3075405198378975
-        },
-        {
-          "id": "wall_0_opening_1",
-          "wall_id": "wall_0",
-          "type": "unknown",
-          "width": {
-            "value_m": 0.804640319900245,
-            "ci_low_m": 0.724640319900245,
-            "ci_high_m": 0.8846403199002449,
-            "confidence_level": 0.95
-          },
-          "position_on_wall_m": 2.765951099657091
-        }
-      ],
+      "openings": [],
       "ceiling_height": {
         "value_m": 2.5,
         "ci_low_m": 1.5,
@@ -128,53 +103,18 @@
         "confidence_level": 0.95
       },
       "floor_area": {
-        "value_m": 35.11834234227183,
-        "ci_low_m": 32.308874954890086,
-        "ci_high_m": 37.927809729653575,
+        "value_m": 9.907806184234833,
+        "ci_low_m": 9.115181689496046,
+        "ci_high_m": 10.70043067897362,
         "confidence_level": 0.95
       },
-      "damage_regions": [
-        {
-          "id": "damage_concealed_wall_0_opening_0",
-          "surface_id": "wall_0",
-          "class": "concealed_moisture_risk",
-          "extent_m2": {
-            "value_m": 0.0,
-            "ci_low_m": 0.0,
-            "ci_high_m": 0.1,
-            "confidence_level": 0.95
-          },
-          "concealed_flag": true,
-          "concealed_rule": "concealed_behind_opening"
-        },
-        {
-          "id": "damage_concealed_wall_0_opening_1",
-          "surface_id": "wall_0",
-          "class": "concealed_moisture_risk",
-          "extent_m2": {
-            "value_m": 0.0,
-            "ci_low_m": 0.0,
-            "ci_high_m": 0.1,
-            "confidence_level": 0.95
-          },
-          "concealed_flag": true,
-          "concealed_rule": "concealed_behind_opening"
-        }
-      ],
+      "damage_regions": [],
       "scope_line_items": [
         {
-          "id": "scope_damage_concealed_wall_0_opening_0",
+          "id": "scope_visual_sweep",
           "surface_id": "wall_0",
-          "damage_region_id": "damage_concealed_wall_0_opening_0",
-          "description": "Probe opening jambs for concealed moisture (rule: concealed_behind_opening)",
-          "quantity": 1,
-          "unit": "each"
-        },
-        {
-          "id": "scope_damage_concealed_wall_0_opening_1",
-          "surface_id": "wall_0",
-          "damage_region_id": "damage_concealed_wall_0_opening_1",
-          "description": "Probe opening jambs for concealed moisture (rule: concealed_behind_opening)",
+          "damage_region_id": null,
+          "description": "No automated damage regions; perform visual sweep",
           "quantity": 1,
           "unit": "each"
         }
@@ -187,15 +127,15 @@
     ],
     "adjacency": [],
     "footprint_area": {
-      "value_m": 35.11834234227183,
-      "ci_low_m": 32.308874954890086,
-      "ci_high_m": 37.927809729653575,
+      "value_m": 9.907806184234833,
+      "ci_low_m": 9.115181689496046,
+      "ci_high_m": 10.70043067897362,
       "confidence_level": 0.95
     },
     "rendered_plan_path": "/Users/ubaidahmed/Documents/personal/assignment/fix_loop/after/single_room_plan.png"
   },
   "drift_correction": {
     "method_used": "poses_as_is",
-    "notes": "wall_method=oriented_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement"
+    "notes": "wall_method=manhattan_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement"
   }
 }

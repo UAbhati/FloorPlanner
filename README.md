@@ -29,7 +29,7 @@ Photo/video need metric scale: `--ref-length-m` / `--ref-width-m`, or rows in `b
 Photo/video try **COLMAP** first (scaled to the long-wall reference). If reconstruction is too thin (<200 points) or fails, they fall back to the tape/GT rectangle. Force the fallback with `--no-colmap`.
 
 ## Docs
-- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — what the walker installs and how they walk
+- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — walk-in handoff (Stray folder works for all 3 tiers; plain phone needs tape L×W)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) — requirement → artifact → status
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — fix-loop (regenerate with `python fix_loop/regenerate.py`)
 - [memory.md](memory.md) — major design decisions

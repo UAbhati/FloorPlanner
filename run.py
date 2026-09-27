@@ -30,7 +30,10 @@ from capture_io.android_media import (  # noqa: E402
     resolve_video,
 )
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
-from reconstruction.damage import detect_damage_from_photos, empty_damage_for_lidar  # noqa: E402
+from reconstruction.damage import (  # noqa: E402
+    detect_damage_from_photos,
+    empty_damage_for_lidar,
+)
 from reconstruction.media_layout import load_ground_truth, rectangle_room  # noqa: E402
 from reconstruction.planes import (  # noqa: E402
     find_floor,
@@ -201,38 +204,9 @@ def run_lidar_tier(capture_dir: Path, out_dir: Path, *, wall_method: str = "auto
     }
 
 
-def _resolve_rect_dims(
-    capture_dir: Path,
-    ref_length_m: float | None,
-    ref_width_m: float | None,
-) -> tuple[float, float, float | None, list, str]:
-    gt = load_ground_truth(GT_PATH, capture_dir.name)
-    length = ref_length_m
-    width = ref_width_m
-    ceiling = None
-    openings: list = []
-    source_bits = []
-    if gt:
-        if length is None and gt.length_m is not None:
-            length = gt.length_m
-            source_bits.append("gt_length")
-        if width is None and gt.width_m is not None:
-            width = gt.width_m
-            source_bits.append("gt_width")
-        ceiling = gt.ceiling_height_m
-        openings = gt.openings
-        if ceiling is not None:
-            source_bits.append("gt_ceiling")
-    if ref_length_m is not None:
-        source_bits.append("cli_length")
-    if ref_width_m is not None:
-        source_bits.append("cli_width")
-    if length is None or width is None:
-        raise SystemExit(
-            "photo/video tiers need metric scale. Pass --ref-length-m and --ref-width-m, "
-            f"or add rows for room_id={capture_dir.name} in benchmark/ground_truth.csv."
-        )
-    return length, width, ceiling, openings, "+".join(source_bits) or "unknown"
+def _is_stray_capture(capture_dir: Path) -> bool:
+    """True if folder looks like a Stray Scanner export (metric depth + poses)."""
+    return (capture_dir / "odometry.csv").is_file() and (capture_dir / "depth").is_dir()
 
 
 def run_media_tier(
@@ -244,6 +218,88 @@ def run_media_tier(
     *,
     use_colmap: bool = True,
 ) -> dict:
+    """Photo/video tier.
+
+    Priority:
+    1. Stray Scanner folder → same metric reconstruction as LiDAR, wider tier CIs
+       (walk-in / provided samples work without my_room GT).
+    2. COLMAP SfM scaled by --ref-length-m (or GT length) when dense enough.
+    3. Axis-aligned rectangle from --ref-length-m/--ref-width-m or GT.
+    """
+    # --- Path A: Stray export (provided samples + LiDAR walk-in handoff) ---
+    if _is_stray_capture(capture_dir):
+        output = run_lidar_tier(capture_dir, out_dir, wall_method="auto")
+        output["tier"] = tier
+        output["device"] = (
+            "iPhone Pro-class (Stray Scanner export; "
+            f"{tier} tier uses depth+poses with widened CIs)"
+        )
+        # Re-emit room measurements with photo/video CI widths.
+        room0 = output["rooms"][0]
+        # Rebuild CIs by re-wrapping lengths (values unchanged).
+        wall_frac = TIER_WALL_FRAC[tier]
+        for wall in room0["walls"]:
+            v = wall["length"]["value_m"]
+            m = max(0.05, v * wall_frac)
+            wall["length"] = measurement(v, v - m, v + m)
+        area = room0["floor_area"]["value_m"]
+        am = max(0.5, area * TIER_AREA_FRAC[tier])
+        room0["floor_area"] = measurement(area, area - am, area + am)
+        ch = room0["ceiling_height"]["value_m"]
+        if ch > 0:
+            cm = max(0.05, ch * wall_frac)
+            room0["ceiling_height"] = measurement(ch, ch - cm, ch + cm)
+        output["drift_correction"]["notes"] = (
+            f"method=stray_metric_cloud; tier={tier}; "
+            + output["drift_correction"]["notes"]
+            + f" Wall CIs widened to ±{int(wall_frac*100)}% for this tier."
+        )
+        # Damage from RGB video frames if present.
+        try:
+            video = resolve_video(capture_dir)
+            frame_dir = out_dir / f"{capture_dir.name}_{tier}_rgb_frames"
+            images = extract_video_frames(video, frame_dir, max_frames=8)
+            # Rebuild a minimal RoomPolygon-like for damage helper via walls already in JSON — skip;
+            # attach empty damage if we can't rebuild. Prefer running damage on frames with stub room.
+            from reconstruction.room_polygon import RoomPolygon, Wall
+            import numpy as np
+
+            walls = []
+            for w in room0["walls"]:
+                walls.append(
+                    Wall(
+                        id=w["id"],
+                        start=np.array(w["start"], dtype=float),
+                        end=np.array(w["end"], dtype=float),
+                        length_m=w["length"]["value_m"],
+                    )
+                )
+            poly = np.array(room0["polygon"], dtype=float)
+            room_obj = RoomPolygon(
+                vertices_2d=poly,
+                walls=walls,
+                openings=[],
+                floor_area_m2=area,
+                method="stray_metric_cloud",
+                low_confidence=False,
+            )
+            damage, scope = detect_damage_from_photos(images, room_obj)
+            room0["damage_regions"] = damage
+            room0["scope_line_items"] = scope
+        except Exception as exc:  # noqa: BLE001
+            output["drift_correction"]["notes"] += f" damage_rgb_skip={exc}"
+        # Rewrite plan path label
+        plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
+        # Keep lidar plan; also copy name for tier clarity if exists
+        lidar_plan = Path(output["stitched_plan"]["rendered_plan_path"])
+        if lidar_plan.is_file():
+            import shutil
+
+            shutil.copy2(lidar_plan, plan_path)
+            output["stitched_plan"]["rendered_plan_path"] = str(plan_path)
+        return output
+
+    # --- Path B/C: plain phone photos or video ---
     if tier == "photo":
         photo_dir = resolve_photo_dir(capture_dir)
         images = list_images(photo_dir)
@@ -254,15 +310,26 @@ def run_media_tier(
         images = extract_video_frames(video, frame_dir, max_frames=16)
         media_note = f"video={video.name} extracted_frames={len(images)}"
 
-    length, width, ceiling_m, openings, scale_src = _resolve_rect_dims(
-        capture_dir, ref_length_m, ref_width_m
-    )
+    gt = load_ground_truth(GT_PATH, capture_dir.name)
+    length = ref_length_m if ref_length_m is not None else (gt.length_m if gt else None)
+    width = ref_width_m if ref_width_m is not None else (gt.width_m if gt else None)
+    ceiling_m = gt.ceiling_height_m if gt else None
+    openings = gt.openings if gt else []
+    scale_src_parts = []
+    if ref_length_m is not None:
+        scale_src_parts.append("cli_length")
+    elif gt and gt.length_m is not None:
+        scale_src_parts.append("gt_length")
+    if ref_width_m is not None:
+        scale_src_parts.append("cli_width")
+    elif gt and gt.width_m is not None:
+        scale_src_parts.append("gt_width")
 
     sfm_notes = ""
     room: RoomPolygon | None = None
     ceiling = None
 
-    if use_colmap:
+    if use_colmap and length is not None:
         workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
         try:
             sfm = reconstruct_metric_room(images, workspace, ref_length_m=length)
@@ -271,15 +338,23 @@ def run_media_tier(
             if sfm.ceiling_height_m is not None:
                 frac = TIER_WALL_FRAC[tier]
                 h = sfm.ceiling_height_m
-                # Rough percentile gets a wider CI than a plane fit.
                 pad = max(h * frac, 0.15 if sfm.ceiling_source == "plane" else 0.5)
                 ceiling = measurement(h, h - pad, h + pad)
             media_note = f"{media_note}; colmap_ok"
         except SfMError as exc:
             sfm_notes = f"colmap_failed={exc}"
-            media_note = f"{media_note}; colmap_fallback_ref_rectangle"
+            media_note = f"{media_note}; colmap_fallback"
 
     if room is None:
+        if length is None or width is None:
+            raise SystemExit(
+                "photo/video on a plain phone capture needs metric scale after SfM failure.\n"
+                "Pass both --ref-length-m and --ref-width-m (tape the two wall spans), "
+                "or provide benchmark/ground_truth.csv for this folder name.\n"
+                "If the input is a Stray Scanner export (odometry.csv + depth/), "
+                "re-run without those flags — metric reconstruction is used automatically.\n"
+                f"capture_dir={capture_dir}"
+            )
         room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
         if ceiling is None:
             if ceiling_m is not None:
@@ -287,9 +362,9 @@ def run_media_tier(
                 ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
             else:
                 ceiling = measurement(2.5, 1.5, 3.5)
-        method_note = f"method=ref_rectangle; scale_source={scale_src}"
+        method_note = f"method=ref_rectangle; scale_source={'+'.join(scale_src_parts) or 'cli'}"
     else:
-        method_note = f"method=colmap_sfm; scale_source={scale_src}; {sfm_notes}"
+        method_note = f"method=colmap_sfm; scale_source={'+'.join(scale_src_parts)}; {sfm_notes}"
         if ceiling is None:
             if ceiling_m is not None:
                 frac = TIER_WALL_FRAC[tier]
@@ -312,7 +387,7 @@ def run_media_tier(
     return {
         "capture_id": capture_dir.name,
         "tier": tier,
-        "device": "Android handheld (native camera)",
+        "device": "Android/iPhone handheld (native camera)",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "rooms": [room_json],
         "stitched_plan": {

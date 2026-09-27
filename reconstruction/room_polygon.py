@@ -1,25 +1,12 @@
 """Extract a top-down room polygon (walls + openings) from a wall-band point cloud.
 
-Wall points live on the *interior surface* of the walls, so in a top-down
-projection they trace the room's perimeter as a thin ring rather than filling
-a solid area. Pipeline:
-
-1. Project the wall-band point cloud (points between floor and ceiling, with a
-   margin to exclude furniture/light-fixture clutter) onto the horizontal
-   plane perpendicular to the up-axis found by `reconstruction.planes`.
-2. Take the convex hull of the projected points and simplify it
-   (`cv2.approxPolyDP`) down to a small polygon. This assumes a convex
-   (typically rectangular) single room - a known limitation, see
-   NOTES.md - and is the right amount of sophistication for a single-room
-   LiDAR capture today; non-convex/multi-room layouts need a different
-   approach (occupancy-grid line fitting) and are follow-up work.
-3. Wall lengths are polygon edge lengths; floor area is the polygon area
-   (shoelace formula, via shapely).
-4. Openings are detected as gaps in point density along each wall: project
-   the wall-band points onto each edge's line, bin by distance along the
-   edge, and flag any contiguous low-density run (surrounded by high-density
-   bins on both sides, so we don't flag the polygon's own corners) as an
-   opening.
+Pipeline:
+1. Project wall-band points onto the horizontal plane (`planes` up-axis).
+2. Prefer occupancy/outer-shell wall fit (`wall_detection.fit_room_walls`).
+   Fall back to convex hull only when that returns None (flagged low-confidence).
+3. Wall lengths = edge lengths; floor area via shapely.
+4. Openings = low-density runs along each edge that are flanked by high-density
+   bins (not just near-corner exclusions).
 """
 from __future__ import annotations
 
@@ -29,6 +16,8 @@ import cv2
 import numpy as np
 from shapely.geometry import Polygon
 
+from reconstruction.wall_detection import fit_room_walls
+
 WALL_BAND_MARGIN_M = 0.15  # exclude this much near the floor and near the ceiling
 HULL_SIMPLIFY_EPSILON_FRACTION = 0.02  # fraction of hull perimeter, for approxPolyDP
 OPENING_BIN_SIZE_M = 0.05
@@ -36,6 +25,7 @@ OPENING_DENSITY_FRACTION = 0.15  # a bin below this fraction of the wall's media
 OPENING_MIN_WIDTH_M = 0.3
 OPENING_MAX_WIDTH_M = 3.0
 OPENING_EDGE_MARGIN_M = 0.1  # ignore low-density runs this close to a corner
+OPENING_PERP_TOLERANCE_M = 0.15  # how far from the wall line a point may sit
 
 
 @dataclass
@@ -60,6 +50,8 @@ class RoomPolygon:
     walls: list[Wall]
     openings: list[Opening] = field(default_factory=list)
     floor_area_m2: float = 0.0
+    method: str = "convex_hull"
+    low_confidence: bool = False
 
 
 def build_horizontal_basis(up_normal: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
@@ -118,8 +110,12 @@ def compute_walls(vertices_2d: np.ndarray) -> list[Wall]:
     return walls
 
 
-def detect_openings_on_wall(wall: Wall, points_2d: np.ndarray, perpendicular_tolerance: float = 0.1) -> list[Opening]:
-    """Find gaps in point density along one wall, from points near that wall's line."""
+def detect_openings_on_wall(
+    wall: Wall,
+    points_2d: np.ndarray,
+    perpendicular_tolerance: float = OPENING_PERP_TOLERANCE_M,
+) -> list[Opening]:
+    """Find gaps in point density along one wall; require high-density flanks."""
     edge_vec = wall.end - wall.start
     edge_len = np.linalg.norm(edge_vec)
     if edge_len < 1e-6:
@@ -131,8 +127,8 @@ def detect_openings_on_wall(wall: Wall, points_2d: np.ndarray, perpendicular_tol
     along = rel @ edge_dir
     perp = rel @ normal
 
-    near_wall = points_2d[(np.abs(perp) <= perpendicular_tolerance) & (along >= 0) & (along <= edge_len)]
-    near_along = (near_wall - wall.start) @ edge_dir if len(near_wall) else np.array([])
+    near_mask = (np.abs(perp) <= perpendicular_tolerance) & (along >= 0) & (along <= edge_len)
+    near_along = along[near_mask]
 
     n_bins = max(int(edge_len / OPENING_BIN_SIZE_M), 1)
     counts, edges = np.histogram(near_along, bins=n_bins, range=(0, edge_len))
@@ -153,17 +149,25 @@ def detect_openings_on_wall(wall: Wall, points_2d: np.ndarray, perpendicular_tol
         j = i
         while j < len(is_gap) and is_gap[j]:
             j += 1
-        gap_start_m = edges[i]
-        gap_end_m = edges[j]
+        gap_start_m = float(edges[i])
+        gap_end_m = float(edges[j])
         width = gap_end_m - gap_start_m
         near_corner = gap_start_m < OPENING_EDGE_MARGIN_M or gap_end_m > edge_len - OPENING_EDGE_MARGIN_M
-        if OPENING_MIN_WIDTH_M <= width <= OPENING_MAX_WIDTH_M and not near_corner:
+        # Flanking bins must be high-density (real wall on both sides of the gap).
+        left_ok = i > 0 and not is_gap[i - 1]
+        right_ok = j < len(is_gap) and not is_gap[j]
+        if (
+            OPENING_MIN_WIDTH_M <= width <= OPENING_MAX_WIDTH_M
+            and not near_corner
+            and left_ok
+            and right_ok
+        ):
             openings.append(
                 Opening(
                     id=f"{wall.id}_opening_{opening_idx}",
                     wall_id=wall.id,
-                    position_on_wall_m=float(gap_start_m),
-                    width_m=float(width),
+                    position_on_wall_m=gap_start_m,
+                    width_m=width,
                 )
             )
             opening_idx += 1
@@ -172,10 +176,26 @@ def detect_openings_on_wall(wall: Wall, points_2d: np.ndarray, perpendicular_tol
 
 
 def build_room_polygon(wall_band_points_2d: np.ndarray) -> RoomPolygon:
-    vertices = fit_room_polygon(wall_band_points_2d)
+    fit = fit_room_walls(wall_band_points_2d)
+    if fit is not None:
+        vertices = fit.vertices_2d
+        method = fit.method
+        low_confidence = fit.method.endswith("_large") or fit.floor_area_m2 > 40.0
+    else:
+        vertices = fit_room_polygon(wall_band_points_2d)
+        method = "convex_hull"
+        low_confidence = True
+
     walls = compute_walls(vertices)
     openings = []
     for wall in walls:
         openings.extend(detect_openings_on_wall(wall, wall_band_points_2d))
-    area = Polygon(vertices).area
-    return RoomPolygon(vertices_2d=vertices, walls=walls, openings=openings, floor_area_m2=area)
+    area = float(Polygon(vertices).area)
+    return RoomPolygon(
+        vertices_2d=vertices,
+        walls=walls,
+        openings=openings,
+        floor_area_m2=area,
+        method=method,
+        low_confidence=low_confidence,
+    )

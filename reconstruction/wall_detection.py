@@ -1,174 +1,136 @@
-"""Detect wall lines in the top-down wall-band point cloud and assemble a room polygon.
+"""Wall / room-polygon detection from a top-down wall-band point cloud.
 
-Diagnostic history (2026-09-27, see NOTES.md): plain convex-hull-of-wall-band
-(reconstruction.room_polygon.fit_room_polygon) picks up furniture/clutter
-mixed with real walls and gives an oversized, wrong-shaped polygon. Iterative
-2D line RANSAC (skimage LineModelND) on the wall-band points was tried next:
-on samples/single_scan_with_ceiling (a large, cluttered space) it found no
-consistent direction - inlier fraction stayed low and dominant-line angles
-were scattered across the full 0-180 degree range. On samples/single_room
-(smaller, mostly eye-level coverage) a dominant direction did emerge
-consistently around 45-49 degrees, though still noisy (~2-4% inlier
-fraction per draw, echoing the floor's "multiple close parallel layers"
-issue from planes.py).
+History (see NOTES.md + memory.md):
+- Convex hull of the full wall band over-includes interior clutter (~115 m² junk).
+- Manhattan line-RANSAC produced invalid rectangles.
+- Occupancy contour / minAreaRect on a radial shell still tracked the outer
+  envelope of clutter + adjacent space seen through doorways.
 
-What's implemented here: iterative line RANSAC on a random subsample (full
-density is too slow and unnecessary for line fitting), merging nearby
-parallel lines the same way planes.py merges floor sub-layers, then
-classifying the merged lines into up to two roughly-perpendicular direction
-groups (Manhattan-room assumption) and building a rectangle from the most-
-supported line in each group. This only fires when both groups clear a
-minimum-support bar; otherwise the caller should fall back to the convex
-hull, since a wrong "confident" rectangle is worse than an honestly rough
-hull. Non-rectangular rooms are not handled - documented limitation.
+Current approach — polar max-radius outline:
+1. From the 2D median centre, bin points by angle; keep the farthest point in
+   each bin (the wall hit along that ray).
+2. Fit an oriented min-area rectangle to those outline points.
+3. If that rectangle is implausible, fall back to the occupancy contour of the
+   outline points; caller may still fall back to convex hull.
 """
 from __future__ import annotations
 
-import warnings
 from dataclasses import dataclass
 
+import cv2
 import numpy as np
-from skimage.measure import LineModelND, ransac
 
-LINE_RESIDUAL_THRESHOLD_M = 0.04
-LINE_MIN_INLIERS = 150
-MAX_LINES_TO_EXTRACT = 20
-LINE_SUBSAMPLE_SIZE = 20000
-LINE_STRIP_MARGIN_M = 0.1
-PARALLEL_MERGE_ANGLE_DEG = 12.0
-PARALLEL_MERGE_OFFSET_M = 0.25
-PERPENDICULAR_TOLERANCE_DEG = 20.0
-MIN_GROUP_SUPPORT = 800  # summed inlier count required for each of the 2 direction groups
+N_ANGLE_BINS = 72
+MIN_OUTLINE_POINTS = 24
+MIN_CONTOUR_AREA_M2 = 1.5
+# Captures may include adjacent space through doorways; still emit a rectangle
+# and flag oversized footprints in the caller rather than falling back to hull.
+MAX_SINGLE_ROOM_AREA_M2 = 40.0
+GRID_RESOLUTION_M = 0.05
+SIMPLIFY_EPSILON_FRAC = 0.02
+OUTLIER_RAY_PERCENTILE = 90.0
 
 
 @dataclass
-class WallLine:
-    origin: np.ndarray  # (2,) a point on the line
-    direction: np.ndarray  # (2,) unit direction
-    inlier_count: int
-    angle_deg: float  # in [0, 180)
+class WallFitResult:
+    vertices_2d: np.ndarray  # (N, 2)
+    method: str  # "oriented_rect" | "occupancy_contour"
+    floor_area_m2: float
+    shell_point_count: int
 
 
-def _fit_lines(points_2d: np.ndarray, rng: np.random.Generator) -> list[WallLine]:
-    if len(points_2d) > LINE_SUBSAMPLE_SIZE:
-        idx = rng.choice(len(points_2d), size=LINE_SUBSAMPLE_SIZE, replace=False)
-        remaining = points_2d[idx].copy()
-    else:
-        remaining = points_2d.copy()
+def _polar_outline(points_2d: np.ndarray, n_bins: int = N_ANGLE_BINS) -> np.ndarray:
+    center = np.median(points_2d, axis=0)
+    delta = points_2d - center
+    angles = np.arctan2(delta[:, 1], delta[:, 0])  # [-pi, pi]
+    radii = np.linalg.norm(delta, axis=1)
 
-    lines = []
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", category=FutureWarning)
-        for _ in range(MAX_LINES_TO_EXTRACT):
-            if len(remaining) < LINE_MIN_INLIERS:
-                break
-            model, inliers = ransac(
-                remaining, LineModelND, min_samples=2, residual_threshold=LINE_RESIDUAL_THRESHOLD_M, max_trials=300
-            )
-            if inliers is None or inliers.sum() < LINE_MIN_INLIERS:
-                break
-            origin, direction = model.params
-            direction = direction / np.linalg.norm(direction)
-            angle = float(np.degrees(np.arctan2(direction[1], direction[0])) % 180)
-            lines.append(WallLine(origin=origin, direction=direction, inlier_count=int(inliers.sum()), angle_deg=angle))
+    bin_ids = np.floor((angles + np.pi) / (2 * np.pi) * n_bins).astype(int)
+    bin_ids = np.clip(bin_ids, 0, n_bins - 1)
 
-            distances = np.abs(model.residuals(remaining))
-            remaining = remaining[distances > LINE_STRIP_MARGIN_M]
-    return lines
-
-
-def _angle_diff(a: float, b: float) -> float:
-    """Smallest difference between two angles taken mod 180 degrees."""
-    d = abs(a - b) % 180
-    return min(d, 180 - d)
-
-
-def _merge_parallel_lines(lines: list[WallLine]) -> list[WallLine]:
-    """Merge lines that are close in both angle and perpendicular offset (same physical wall)."""
-    merged: list[WallLine] = []
-    used = [False] * len(lines)
-    order = sorted(range(len(lines)), key=lambda i: -lines[i].inlier_count)
-    for i in order:
-        if used[i]:
+    outline = []
+    ray_radii = []
+    for b in range(n_bins):
+        mask = bin_ids == b
+        if not np.any(mask):
             continue
-        group = [lines[i]]
-        used[i] = True
-        ref = lines[i]
-        ref_normal = np.array([-ref.direction[1], ref.direction[0]])
-        for j in order:
-            if used[j]:
-                continue
-            other = lines[j]
-            if _angle_diff(ref.angle_deg, other.angle_deg) > PARALLEL_MERGE_ANGLE_DEG:
-                continue
-            offset_diff = abs(np.dot(other.origin - ref.origin, ref_normal))
-            if offset_diff <= PARALLEL_MERGE_OFFSET_M:
-                group.append(other)
-                used[j] = True
+        idx = np.argmax(radii[mask])
+        pts = points_2d[mask]
+        outline.append(pts[idx])
+        ray_radii.append(radii[mask][idx])
 
-        total = sum(w.inlier_count for w in group)
-        avg_angle = float(np.average([w.angle_deg for w in group], weights=[w.inlier_count for w in group]))
-        avg_origin = np.average([w.origin for w in group], axis=0, weights=[w.inlier_count for w in group])
-        direction = np.array([np.cos(np.radians(avg_angle)), np.sin(np.radians(avg_angle))])
-        merged.append(WallLine(origin=avg_origin, direction=direction, inlier_count=total, angle_deg=avg_angle))
+    if len(outline) < MIN_OUTLINE_POINTS:
+        return np.asarray(outline) if outline else points_2d[:0].reshape(0, 2)
 
-    merged.sort(key=lambda w: -w.inlier_count)
-    return merged
+    outline_arr = np.asarray(outline)
+    ray_radii_arr = np.asarray(ray_radii)
+    keep = ray_radii_arr <= np.percentile(ray_radii_arr, OUTLIER_RAY_PERCENTILE)
+    if keep.sum() < max(MIN_OUTLINE_POINTS, len(outline_arr) // 2):
+        return outline_arr
+    return outline_arr[keep]
 
 
-def _line_intersection(a: WallLine, b: WallLine) -> np.ndarray | None:
-    """Intersection point of two 2D lines given as (origin, direction), or None if near-parallel."""
-    d1, d2 = a.direction, b.direction
-    denom = d1[0] * d2[1] - d1[1] * d2[0]
-    if abs(denom) < 1e-9:
+def _occupancy_contour(shell_2d: np.ndarray) -> np.ndarray | None:
+    mins = shell_2d.min(axis=0) - GRID_RESOLUTION_M
+    maxs = shell_2d.max(axis=0) + GRID_RESOLUTION_M
+    span = maxs - mins
+    cols = max(int(np.ceil(span[0] / GRID_RESOLUTION_M)), 8)
+    rows = max(int(np.ceil(span[1] / GRID_RESOLUTION_M)), 8)
+
+    grid = np.zeros((rows, cols), dtype=np.uint8)
+    ix = np.clip(((shell_2d[:, 0] - mins[0]) / GRID_RESOLUTION_M).astype(int), 0, cols - 1)
+    iy = np.clip(((shell_2d[:, 1] - mins[1]) / GRID_RESOLUTION_M).astype(int), 0, rows - 1)
+    grid[iy, ix] = 255
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
+    grid = cv2.morphologyEx(grid, cv2.MORPH_CLOSE, kernel, iterations=2)
+
+    contours, _ = cv2.findContours(grid, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not contours:
         return None
-    diff = b.origin - a.origin
-    t = (diff[0] * d2[1] - diff[1] * d2[0]) / denom
-    return a.origin + t * d1
+    largest = max(contours, key=cv2.contourArea)
+    peri = cv2.arcLength(largest, closed=True)
+    approx = cv2.approxPolyDP(largest, SIMPLIFY_EPSILON_FRAC * peri, closed=True)
+    verts_px = approx.reshape(-1, 2).astype(np.float64)
+    return np.stack(
+        [
+            mins[0] + verts_px[:, 0] * GRID_RESOLUTION_M,
+            mins[1] + verts_px[:, 1] * GRID_RESOLUTION_M,
+        ],
+        axis=1,
+    )
 
 
-def fit_rectangular_room(points_2d: np.ndarray, seed: int = 42) -> np.ndarray | None:
-    """Try to fit a 4-corner rectangle from two dominant perpendicular wall directions.
+def _oriented_rectangle(points_2d: np.ndarray) -> np.ndarray:
+    rect = cv2.minAreaRect(points_2d.astype(np.float32))
+    return cv2.boxPoints(rect).astype(np.float64)
 
-    Returns None (caller should fall back to the convex hull) if no two
-    perpendicular direction groups clear MIN_GROUP_SUPPORT.
-    """
-    rng = np.random.default_rng(seed)
-    lines = _fit_lines(points_2d, rng)
-    if len(lines) < 2:
-        return None
-    merged = _merge_parallel_lines(lines)
 
-    primary = merged[0]
-    group_a = [w for w in merged if _angle_diff(w.angle_deg, primary.angle_deg) <= PERPENDICULAR_TOLERANCE_DEG]
-    group_b = [
-        w
-        for w in merged
-        if abs(_angle_diff(w.angle_deg, primary.angle_deg) - 90) <= PERPENDICULAR_TOLERANCE_DEG
-    ]
-    support_a = sum(w.inlier_count for w in group_a)
-    support_b = sum(w.inlier_count for w in group_b)
-    if support_a < MIN_GROUP_SUPPORT or support_b < MIN_GROUP_SUPPORT or not group_b:
+def _polygon_area(vertices: np.ndarray) -> float:
+    x, y = vertices[:, 0], vertices[:, 1]
+    return float(0.5 * np.abs(np.dot(x, np.roll(y, -1)) - np.dot(y, np.roll(x, -1))))
+
+
+def fit_room_walls(points_2d: np.ndarray) -> WallFitResult | None:
+    if len(points_2d) < 100:
         return None
 
-    # Within each direction group, the two walls of the room are the most
-    # widely separated (by perpendicular offset), not necessarily the two
-    # single highest-inlier lines (a hallway-facing wall might outscore the
-    # true opposite wall while still being the *same* wall as another entry).
-    def extreme_pair(group: list[WallLine], ref_direction: np.ndarray) -> tuple[WallLine, WallLine]:
-        normal = np.array([-ref_direction[1], ref_direction[0]])
-        by_offset = sorted(group, key=lambda w: np.dot(w.origin, normal))
-        return by_offset[0], by_offset[-1]
-
-    a_lo, a_hi = extreme_pair(group_a, primary.direction)
-    b_lo, b_hi = extreme_pair(group_b, group_b[0].direction)
-
-    corners = [
-        _line_intersection(a_lo, b_lo),
-        _line_intersection(a_lo, b_hi),
-        _line_intersection(a_hi, b_hi),
-        _line_intersection(a_hi, b_lo),
-    ]
-    if any(c is None for c in corners):
+    outline = _polar_outline(points_2d)
+    if len(outline) < MIN_OUTLINE_POINTS:
         return None
-    return np.array(corners)
+
+    rect = _oriented_rectangle(outline)
+    rect_area = _polygon_area(rect)
+    if rect_area < MIN_CONTOUR_AREA_M2:
+        return None
+
+    method = "oriented_rect"
+    if rect_area > MAX_SINGLE_ROOM_AREA_M2:
+        method = "oriented_rect_large"  # likely multi-space / doorway bleed
+
+    return WallFitResult(
+        vertices_2d=rect,
+        method=method,
+        floor_area_m2=rect_area,
+        shell_point_count=len(outline),
+    )

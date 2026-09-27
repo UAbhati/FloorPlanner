@@ -1,42 +1,55 @@
 # Indoor capture → dimensioned plan
 
-Route 2 pipeline: Stray Scanner LiDAR + Android photo/video → schema JSON + top-down plan PNG.
+Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON + top-down plan.
 
-## Setup (macOS, ~5 min)
+## Setup (macOS, ~5–15 min on a clean machine)
 
 ```bash
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-# system tools (once): brew install ffmpeg colmap
+brew install ffmpeg colmap   # once
 ```
 
-## One command per capture
+## Walk-in / Stray export (all three tiers)
+
+Hand the unzipped Stray folder (must contain `odometry.csv`, `depth/`, `rgb.mp4`):
 
 ```bash
-# LiDAR (Stray Scanner export folder)
-python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
-
-# Photo (Android folder with photos/ or loose images)
-python run.py --input samples/my_room --tier photo --out out/
-
-# Video (folder containing video.mp4)
-python run.py --input samples/my_room --tier video --out out/
+source .venv/bin/activate
+python run.py --input /path/to/stray_export --tier lidar --out out/walkin
+python run.py --input /path/to/stray_export --tier video --out out/walkin
+python run.py --input /path/to/stray_export --tier photo --out out/walkin
 ```
 
-Photo/video need metric scale: `--ref-length-m` / `--ref-width-m`, or rows in `benchmark/ground_truth.csv` for that folder name.
+Defense checklist: [docs/WALKIN_CHECKLIST.md](docs/WALKIN_CHECKLIST.md)
+Capture protocol: [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md)
 
-Photo/video try **COLMAP** first (scaled to the long-wall reference). If reconstruction is too thin (<200 points) or fails, they fall back to the tape/GT rectangle. Force the fallback with `--no-colmap`.
+## Samples (smoke)
+
+```bash
+python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
+python run.py --input samples/my_room --tier photo --out out/   # needs GT or --ref-length-m/--ref-width-m
+```
+
+## Reproduce benchmark tables
+
+```bash
+python benchmark/run_benchmark.py   # → benchmark/REPORT.md + results.json
+python fix_loop/regenerate.py       # → fix_loop/before + after
+```
 
 ## Docs
-- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — walk-in handoff (Stray folder works for all 3 tiers; plain phone needs tape L×W)
-- [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md) — requirement → artifact → status
-- [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — fix-loop (regenerate with `python fix_loop/regenerate.py`)
-- [memory.md](memory.md) — major design decisions
-- [NOTES.md](NOTES.md) — debug narrative
-- [schema/output.schema.json](schema/output.schema.json) — output contract
+- [docs/WALKIN_CHECKLIST.md](docs/WALKIN_CHECKLIST.md) — **30% walk-in**
+- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix
+- [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
+- [benchmark/REPORT.md](benchmark/REPORT.md) — gate/timing tables (regen with script)
+- [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — **10%** vs Polycam/Magicplan
+- [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — **25%** fix loop
+- [memory.md](memory.md) — design decisions
 
 ## Honest limits
-- LiDAR walls use polar outline + oriented rectangle; oversized footprints are flagged.
-- Ceiling fails soft when the walk never looks up.
-- Photo/video on Android are thin-sensor paths (wide CIs); SfM metric reconstruction is follow-up.
+- LiDAR: polar outline + oriented rectangle; `oriented_rect_large` = doorway bleed / multi-space.
+- Ceiling soft-fails when the walk never looks up.
+- Android photo/video: COLMAP often too thin → tape-scaled rectangle with tier CIs.
+- Multi-room stitch / drift ablation: not shipped (documented FAIL in benchmark report).

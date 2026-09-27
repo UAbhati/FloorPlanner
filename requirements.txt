@@ -1,0 +1,11 @@
+numpy
+scipy
+pandas
+opencv-python
+open3d
+trimesh
+shapely
+pydantic
+jsonschema
+scikit-image
+matplotlib

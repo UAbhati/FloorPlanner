@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://assignment.local/schema/output.schema.json",
+  "title": "CaptureOutput",
+  "description": "Round 2 output contract: dimensioned per-room plan, stitched multi-room plan, damage regions, scope lines, confidence intervals.",
+  "type": "object",
+  "required": ["capture_id", "tier", "device", "rooms", "stitched_plan", "generated_at"],
+  "properties": {
+    "capture_id": { "type": "string" },
+    "tier": { "type": "string", "enum": ["photo", "video", "lidar"] },
+    "device": { "type": "string", "description": "e.g. 'iPhone 15 Pro (LiDAR)' or 'Android handheld (photo)'" },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "rooms": {
+      "type": "array",
+      "items": { "$ref": "#/definitions/room" }
+    },
+    "stitched_plan": { "$ref": "#/definitions/stitchedPlan" },
+    "drift_correction": { "$ref": "#/definitions/driftCorrection" },
+    "repeatability": { "$ref": "#/definitions/repeatability" }
+  },
+  "definitions": {
+    "measurement": {
+      "type": "object",
+      "description": "A single measured value with a calibrated confidence interval.",
+      "required": ["value_m", "ci_low_m", "ci_high_m"],
+      "properties": {
+        "value_m": { "type": "number" },
+        "ci_low_m": { "type": "number" },
+        "ci_high_m": { "type": "number" },
+        "confidence_level": { "type": "number", "default": 0.95 }
+      }
+    },
+    "point2": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "wall": {
+      "type": "object",
+      "required": ["id", "start", "end", "length"],
+      "properties": {
+        "id": { "type": "string" },
+        "start": { "$ref": "#/definitions/point2" },
+        "end": { "$ref": "#/definitions/point2" },
+        "length": { "$ref": "#/definitions/measurement" }
+      }
+    },
+    "opening": {
+      "type": "object",
+      "description": "Door/window/passage detected in a wall.",
+      "required": ["id", "wall_id", "type", "width", "position_on_wall_m"],
+      "properties": {
+        "id": { "type": "string" },
+        "wall_id": { "type": "string" },
+        "type": { "type": "string", "enum": ["door", "window", "passage", "unknown"] },
+        "width": { "$ref": "#/definitions/measurement" },
+        "position_on_wall_m": { "type": "number", "description": "distance from wall start to opening start" }
+      }
+    },
+    "damageRegion": {
+      "type": "object",
+      "required": ["id", "surface_id", "class", "extent_m2", "concealed_flag"],
+      "properties": {
+        "id": { "type": "string" },
+        "surface_id": { "type": "string" },
+        "class": { "type": "string", "description": "e.g. water_stain, crack, mold, structural" },
+        "extent_m2": { "$ref": "#/definitions/measurement" },
+        "concealed_flag": { "type": "boolean" },
+        "concealed_rule": { "type": ["string", "null"], "description": "rule name that fired, null if not concealed" }
+      }
+    },
+    "scopeLineItem": {
+      "type": "object",
+      "required": ["id", "surface_id", "description", "quantity", "unit"],
+      "properties": {
+        "id": { "type": "string" },
+        "surface_id": { "type": "string" },
+        "damage_region_id": { "type": ["string", "null"] },
+        "description": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" }
+      }
+    },
+    "room": {
+      "type": "object",
+      "required": ["id", "name", "polygon", "walls", "openings", "ceiling_height", "floor_area"],
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "polygon": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/point2" }
+        },
+        "walls": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/wall" }
+        },
+        "openings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/opening" }
+        },
+        "ceiling_height": { "$ref": "#/definitions/measurement" },
+        "floor_area": { "$ref": "#/definitions/measurement" },
+        "damage_regions": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/damageRegion" }
+        },
+        "scope_line_items": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/scopeLineItem" }
+        }
+      }
+    },
+    "adjacency": {
+      "type": "object",
+      "required": ["room_a", "room_b", "shared_wall_id"],
+      "properties": {
+        "room_a": { "type": "string" },
+        "room_b": { "type": "string" },
+        "shared_wall_id": { "type": "string" }
+      }
+    },
+    "stitchedPlan": {
+      "type": "object",
+      "required": ["room_ids", "adjacency", "footprint_area", "rendered_plan_path"],
+      "properties": {
+        "room_ids": { "type": "array", "items": { "type": "string" } },
+        "adjacency": { "type": "array", "items": { "$ref": "#/definitions/adjacency" } },
+        "footprint_area": { "$ref": "#/definitions/measurement" },
+        "rendered_plan_path": { "type": "string" }
+      }
+    },
+    "driftCorrection": {
+      "type": "object",
+      "description": "Required whenever a capture spans more than one room.",
+      "required": ["method_used"],
+      "properties": {
+        "method_used": {
+          "type": "string",
+          "enum": ["loop_closure", "pose_graph_optimization", "plane_anchored_correction", "poses_as_is", "none"]
+        },
+        "notes": { "type": "string" }
+      }
+    },
+    "repeatability": {
+      "type": "object",
+      "properties": {
+        "paired_capture_id": { "type": ["string", "null"] },
+        "per_wall_delta_m": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["wall_id", "delta_m", "delta_pct"],
+            "properties": {
+              "wall_id": { "type": "string" },
+              "delta_m": { "type": "number" },
+              "delta_pct": { "type": "number" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

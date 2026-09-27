@@ -32,13 +32,13 @@ python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
 python run.py --input samples/my_room --tier photo --out out/   # needs GT or --ref-length-m/--ref-width-m
 ```
 
-## Multi-room stitch (hall + bedroom)
+## Multi-room stitch (hall + bedroom + kitchen, 3 rooms + connector)
 
 ```bash
 # Opening-anchored placement (drift correction ON)
-python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align on --out out/stitch
+python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out out/stitch
 # Ablation without door alignment (drift OFF)
-python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align off --out out/stitch
+python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align off --out out/stitch
 ```
 
 ## Docs
@@ -54,4 +54,4 @@ python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align off --ou
 - LiDAR: Manhattan density-peak rectangle (Hough angle + per-axis wall-position peak), falls back to polar outline then hull; `*_large` tag = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
 - Android photo/video: COLMAP often too thin → tape-scaled rectangle with tier CIs.
-- Multi-room stitch: GT hall+`my_bedroom` via `--stitch-gt` (opening-aligned); not independent multi-room LiDAR.
+- Multi-room stitch: GT hall+`my_bedroom`+`my_kitchen` (3 rooms + connector) via `--stitch-gt` (opening-aligned, hall as star center); not independent multi-room LiDAR.

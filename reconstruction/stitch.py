@@ -156,3 +156,139 @@ def stitch_from_gt(
         shared_width_m=shared_width_m,
         align_openings=align_openings,
     )
+
+
+# --- N-room chain stitch (edge list, each child attached to an already-placed parent) ---
+
+CARDINAL_TO_WALL_ID = {"south": "wall_0", "east": "wall_1", "north": "wall_2", "west": "wall_3"}
+OPPOSITE_CARDINAL = {"south": "north", "north": "south", "east": "west", "west": "east"}
+
+
+@dataclass
+class StitchEdge:
+    parent_id: str
+    parent_cardinal: str  # wall of the already-placed parent that the child attaches to
+    child_id: str
+    shared_width_m: float
+
+
+def _attach_room(
+    parent: RoomPolygon,
+    parent_cardinal: str,
+    child: RoomPolygon,
+    shared_width_m: float,
+    *,
+    align_openings: bool,
+) -> tuple[RoomPolygon, np.ndarray, str, str]:
+    """Place `child` flush against `parent`'s `parent_cardinal` wall, outward.
+
+    Generalizes stitch_two_rectangles (parent_cardinal="south") to any of the
+    4 canonical walls so a third (or Nth) room can attach on a different side
+    of an already-placed room without colliding with an existing child.
+    """
+    axis = 1 if parent_cardinal in ("south", "north") else 0
+    other = 1 - axis
+    pmin, pmax = parent.vertices_2d.min(axis=0), parent.vertices_2d.max(axis=0)
+    cmin, cmax = child.vertices_2d.min(axis=0), child.vertices_2d.max(axis=0)
+
+    if parent_cardinal in ("south", "west"):
+        target, child_edge = pmin[axis], cmax[axis]
+    else:  # north, east
+        target, child_edge = pmax[axis], cmin[axis]
+
+    delta = np.zeros(2)
+    delta[axis] = target - child_edge
+
+    child_cardinal = OPPOSITE_CARDINAL[parent_cardinal]
+    parent_wall_id = CARDINAL_TO_WALL_ID[parent_cardinal]
+    child_wall_id = CARDINAL_TO_WALL_ID[child_cardinal]
+    parent_opening = _pick_opening(parent, parent_wall_id, shared_width_m)
+    child_opening = _pick_opening(child, child_wall_id, shared_width_m)
+
+    if align_openings and parent_opening is not None and child_opening is not None:
+        child_moved = _translate_room(child, delta)
+        p_c = _opening_center(parent, parent_opening)
+        c_c = _opening_center(child_moved, child_opening)
+        delta[other] += p_c[other] - c_c[other]
+        method = "plane_anchored_correction"
+        notes = f"opening_aligned shared_width≈{shared_width_m}m on {parent_cardinal}/{child_cardinal}"
+    else:
+        method = "poses_as_is"
+        notes = f"no opening alignment (ablation) on {parent_cardinal}/{child_cardinal}"
+
+    placed = _translate_room(child, delta)
+    return placed, delta, method, notes
+
+
+def stitch_chain_from_gt(
+    gt_csv,
+    root_id: str,
+    edges: list[StitchEdge],
+    *,
+    align_openings: bool = True,
+) -> StitchResult:
+    """Stitch N rooms: `root_id` placed at the origin, each edge's child attached
+    to its (already-placed) parent's named wall. Parents may be the root or any
+    earlier child, so this supports both a star (all children on the root) and
+    longer chains.
+    """
+    gt_root = load_ground_truth(gt_csv, root_id)
+    if gt_root is None or gt_root.length_m is None or gt_root.width_m is None:
+        raise ValueError(f"missing GT length/width for root room {root_id!r} in {gt_csv}")
+    root_room = rectangle_room(
+        gt_root.length_m, gt_root.width_m, gt_root.ceiling_height_m, gt_root.openings, low_confidence=False
+    )
+
+    placed: dict[str, RoomPolygon] = {root_id: root_room}
+    translations: dict[str, np.ndarray] = {root_id: np.zeros(2)}
+    order = [root_id]
+    adjacency: list[dict] = []
+    methods: set[str] = set()
+    notes_parts: list[str] = []
+
+    for edge in edges:
+        if edge.parent_id not in placed:
+            raise ValueError(f"edge parent {edge.parent_id!r} must be placed before {edge.child_id!r}")
+        gt_child = load_ground_truth(gt_csv, edge.child_id)
+        if gt_child is None or gt_child.length_m is None or gt_child.width_m is None:
+            raise ValueError(f"missing GT length/width for {edge.child_id!r} in {gt_csv}")
+        child_room = rectangle_room(
+            gt_child.length_m, gt_child.width_m, gt_child.ceiling_height_m, gt_child.openings, low_confidence=False
+        )
+        placed_child, delta, method, notes = _attach_room(
+            placed[edge.parent_id],
+            edge.parent_cardinal,
+            child_room,
+            edge.shared_width_m,
+            align_openings=align_openings,
+        )
+        placed[edge.child_id] = placed_child
+        translations[edge.child_id] = delta
+        order.append(edge.child_id)
+        child_cardinal = OPPOSITE_CARDINAL[edge.parent_cardinal]
+        adjacency.append(
+            {
+                "room_a": edge.parent_id,
+                "room_b": edge.child_id,
+                "shared_wall_id": f"{edge.parent_id}_{edge.parent_cardinal}__{edge.child_id}_{child_cardinal}",
+            }
+        )
+        methods.add(method)
+        notes_parts.append(f"{edge.parent_id}-{edge.child_id}: {notes}")
+
+    if methods == {"plane_anchored_correction"}:
+        combined_method = "plane_anchored_correction"
+    elif methods == {"poses_as_is"}:
+        combined_method = "poses_as_is"
+    else:
+        combined_method = "mixed"
+
+    footprint = sum(r.floor_area_m2 for r in placed.values())
+    rooms = [PlacedRoom(room_id=rid, room=placed[rid], translation=translations[rid]) for rid in order]
+    return StitchResult(
+        rooms=rooms,
+        adjacency=adjacency,
+        footprint_area_m2=footprint,
+        method=combined_method,
+        notes="; ".join(notes_parts),
+    )

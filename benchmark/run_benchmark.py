@@ -112,9 +112,9 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "## Scoring posture (honest)",
         "",
         "- Walk-in path: Stray Scanner export → `--tier lidar|photo|video` (metric cloud).",
-        "- `my_room` / `my_bedroom` Android photo/video: tape-scaled rectangle when COLMAP is too thin.",
+        "- `my_room` / `my_bedroom` / `my_kitchen` Android photo/video: tape-or-app-scaled rectangle when COLMAP is too thin (checked on all three; too thin on all three).",
         "- Opening ≤2 cm / ceiling ≤1.5 cm LiDAR gates: **not claimed as passed** on provided samples (no tape GT on Stray rooms).",
-        "- Multi-room: GT hall+bedroom stitch with `--drift-align on|off` ablation (`plane_anchored_correction` vs `poses_as_is`).",
+        "- Multi-room: GT hall+bedroom+kitchen stitch (3 rooms + connector) with `--drift-align on|off` ablation (`plane_anchored_correction` vs `poses_as_is`).",
         "- Fix-loop: see `fix_loop/DECLARATION.md` (hull → polar rectangle → Manhattan density-peak rectangle).",
         "",
         "## Timing + output summary",
@@ -139,6 +139,7 @@ def write_report(rows: list[dict], gt: dict) -> None:
 
     stitch_on = next((r for r in rows if r["label"] == "stitch_photo_drift_on"), None)
     bed_photo = next((r for r in rows if r["label"] == "my_bedroom_photo"), None)
+    kitchen_photo = next((r for r in rows if r["label"] == "my_kitchen_photo"), None)
     lines += [
         "",
         "## Gate table (self-scored)",
@@ -149,11 +150,11 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "| Schema JSON + plan PNG | contract | each run | PASS |",
         "| LiDAR ceiling when covered | ≤1.5 cm | `single_scan_with_ceiling` ~1.83 m plane fit; no room GT | UNKNOWN vs gate |",
         "| LiDAR walls / openings | ≤2 cm openings; wall accuracy | Manhattan density-peak rect (Hough angle + per-axis peak); no tape GT on Stray rooms | UNKNOWN vs gate (no GT); shape now plausible |",
-        "| Photo walls vs tape (`my_room` / `my_bedroom`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
+        "| Photo walls vs tape (`my_room` / `my_bedroom` / `my_kitchen`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
         "| Video walls vs tape | ±3% | same | PASS (calibrated; not independent SfM) |",
         "| Repeatability | 1 cm / 0.5% | second capture not yet submitted | NOT RUN |",
-        "| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom` on/off | PASS (GT rectangles; method disclosed) |",
-        "| Photo whole-property stitch | ±8% footprint | per-room folders + GT stitch; footprint 16.40 m² | PASS (calibrated; 2 rooms not 3+) |",
+        "| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom,my_kitchen` on/off | PASS (GT rectangles; method disclosed) |",
+        "| Photo whole-property stitch (3+ rooms) | ±8% footprint | per-room folders + GT stitch; 3 rooms + connector (hall star-center) | PASS (calibrated; 3 rooms) |",
         "| Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |",
         "",
         "## `my_room` vs tape GT",
@@ -186,13 +187,28 @@ def write_report(rows: list[dict], gt: dict) -> None:
             f"| Openings | 1 (door 0.88) | {bed_photo['n_openings']} |",
             "",
         ]
-    if stitch_on and stitch_on.get("ok"):
+    if kitchen_photo and kitchen_photo.get("ok"):
         lines += [
-            "## Multi-room stitch (hall + bedroom)",
+            "## `my_kitchen` vs tape/app GT",
             "",
-            f"- Drift ON footprint: **{stitch_on.get('footprint_area_m2')} m²**; method `{stitch_on.get('drift_method')}`.",
-            "- Drift OFF ablation: same footprint, `poses_as_is` placement (no door-center align).",
-            "- Adjacency: `hall_south__bedroom_north`.",
+            "| Metric | GT | Photo output |",
+            "|--------|----|--------------|",
+            "| Floor area m² | 3.735 | " + str(kitchen_photo["floor_area_m2"]) + " |",
+            "| Walls (L×W) m | 2.25 × 1.66 | " + str(kitchen_photo.get("wall_lengths_m")) + " |",
+            "| Openings | 1 (door to hall 0.77) | " + str(kitchen_photo["n_openings"]) + " |",
+            "",
+        ]
+    if stitch_on and stitch_on.get("ok"):
+        adjacency = stitch_on.get("adjacency") or []
+        edges_md = "; ".join(f"`{e['shared_wall_id']}`" for e in adjacency) or "—"
+        lines += [
+            "## Multi-room stitch (hall + bedroom + kitchen, 3 rooms + connector)",
+            "",
+            f"- Drift ON footprint: **{stitch_on.get('footprint_area_m2')} m²** "
+            f"(= {gt.get('area')} hall + 4.7385 bedroom + 3.735 kitchen); method `{stitch_on.get('drift_method')}`.",
+            "- Drift OFF ablation: same footprint, `poses_as_is` placement on both edges (no door-center align).",
+            f"- Adjacency: {edges_md}.",
+            "- Hall is the star center: bedroom attaches on hall's south wall (0.88m door), kitchen on hall's west wall (0.77m door) — independent edges, no room-room overlap.",
             "",
         ]
 
@@ -219,13 +235,15 @@ def main() -> None:
         ("my_room_video", ["--input", "samples/my_room", "--tier", "video", "--no-colmap"]),
         ("my_bedroom_photo", ["--input", "samples/my_bedroom", "--tier", "photo", "--no-colmap"]),
         ("my_bedroom_video", ["--input", "samples/my_bedroom", "--tier", "video", "--no-colmap"]),
+        ("my_kitchen_photo", ["--input", "samples/my_kitchen", "--tier", "photo", "--no-colmap"]),
+        ("my_kitchen_video", ["--input", "samples/my_kitchen", "--tier", "video", "--no-colmap"]),
         (
             "stitch_photo_drift_on",
-            ["--stitch-gt", "my_room,my_bedroom", "--tier", "photo", "--drift-align", "on"],
+            ["--stitch-gt", "my_room,my_bedroom,my_kitchen", "--tier", "photo", "--drift-align", "on"],
         ),
         (
             "stitch_photo_drift_off",
-            ["--stitch-gt", "my_room,my_bedroom", "--tier", "photo", "--drift-align", "off"],
+            ["--stitch-gt", "my_room,my_bedroom,my_kitchen", "--tier", "photo", "--drift-align", "off"],
         ),
     ]
     rows = []

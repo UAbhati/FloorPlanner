@@ -10,6 +10,7 @@ my_room,floor_area_m2,,11.6644,product_of_length_x_width
 my_room,opening_width,south,0.88,door_with_frame; tape_cm=88; from_left_m=UNKNOWN
 my_room,opening_width,south,0.77,passage_no_frame; tape_cm=77; from_left_m=UNKNOWN
 my_room,opening_width,north,0.90,CLOSED_door_exclude_from_opening_gate; height_m=2.11; door_was_closed_in_capture
+my_room,opening_width,west,0.77,door_to_kitchen; tape_cm=77; added_2026-09-27_with_my_kitchen_capture
 my_bedroom,wall_length,west,1.95,tape_cm=195
 my_bedroom,wall_length,east,1.95,assumed_equal_to_west
 my_bedroom,wall_length,south,2.43,tape_cm=243
@@ -18,3 +19,13 @@ my_bedroom,floor_length,,2.43,
 my_bedroom,floor_width,,1.95,
 my_bedroom,floor_area_m2,,4.7385,product_of_length_x_width
 my_bedroom,opening_width,north,0.88,door_to_hall; tape_or_magicplan_cm=88
+my_bedroom,ceiling_height,,2.58,corrected_2026-09-27_same_slab_as_my_room_and_my_kitchen; previously_defaulted_to_residential_prior_not_measured
+my_kitchen,wall_length,north,2.25,magicplan_app_export_cm=225; long_wall
+my_kitchen,wall_length,south,2.25,assumed_equal_to_north; rectangle
+my_kitchen,wall_length,east,1.66,magicplan_app_export_cm=166; short_wall
+my_kitchen,wall_length,west,1.66,assumed_equal_to_east; rectangle
+my_kitchen,floor_length,,2.25,
+my_kitchen,floor_width,,1.66,
+my_kitchen,floor_area_m2,,3.735,product_of_length_x_width; magicplan_app_reported=3.74
+my_kitchen,ceiling_height,,2.58,same_slab_as_my_room_and_my_bedroom_per_owner
+my_kitchen,opening_width,east,0.77,door_to_hall; magicplan_app_export_cm=77; paired_with_my_room_west_opening

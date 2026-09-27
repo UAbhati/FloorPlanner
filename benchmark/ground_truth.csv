@@ -1,0 +1,12 @@
+room_id,metric,wall_id,value_m,notes
+my_room,ceiling_height,,2.58,single_spot_tape_cm=258; only one height measured
+my_room,wall_length,north,4.765,tape_cm=476.5; long wall
+my_room,wall_length,south,4.765,assumed_equal_to_north; rectangle
+my_room,wall_length,west,2.42,tape_cm=242; short wall
+my_room,wall_length,east,2.42,assumed_equal_to_west; rectangle
+my_room,floor_length,,4.765,north_south_axis
+my_room,floor_width,,2.42,east_west_axis
+my_room,floor_area_m2,,11.5313,product_of_length_x_width
+my_room,opening_width,south,0.765,door_with_frame; height_m=2.07; from_left_m=UNKNOWN
+my_room,opening_width,south,0.73,passage_no_frame; height_m=2.13; from_left_m=UNKNOWN
+my_room,opening_width,north,0.90,CLOSED_door_exclude_from_opening_gate; height_m=2.11; door_was_closed_in_capture

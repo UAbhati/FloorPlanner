@@ -2,6 +2,7 @@ numpy
 scipy
 pandas
 opencv-python
+Pillow
 open3d
 trimesh
 shapely

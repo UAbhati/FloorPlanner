@@ -1,62 +1,74 @@
-# Head-to-head vs consumer app (10% of score)
+# Head-to-head vs Magicplan (Android)
 
-Compare **our LiDAR-tier output** to one free consumer scanner on **2 rooms**.
+**Constraint:** No iPhone → compare **our photo/video tier** on `my_room` to **Magicplan Android** on the same hall (disclose in report: not LiDAR-tier).
 
-## App choice (pick one, free tier OK)
-Recommended: **Polycam** or **Magicplan** (App Store). Record **app name + version** here:
-
-- App: __________________
-- Version: __________________
+## App record
+- App: **Magicplan** (Android)
+- Version: __________________  ← Settings / About in the app
 - Date: __________________
+- Project name: 1st floor (or whatever you named it)
 
-You need an **iPhone** (or friend/device at defense prep) for the incumbent app. Our pipeline still runs on the Stray export from the same rooms.
+## What you do in Magicplan now
 
-## Capture procedure (same two rooms)
-For each room (Room A = your hall `my_room` if they allow Android-only for us; Room B = second room if available — otherwise use two Stray sample rooms for *geometry* demo and note limited GT):
+### 1. Finish the plan (not just upload media)
+Photos/video alone are not enough — Magicplan needs a **drawn/estimated floor plan** with dimensions:
 
-1. Scan with **Stray Scanner** → keep export for our pipeline.
-2. Scan with **chosen app** → export measurements / plan (screenshot + CSV/PDF if available).
-3. Tape GT already in `benchmark/ground_truth.csv` for `my_room`; tape Room B the same way.
+1. Open your **1st floor** project.
+2. Create / confirm **one room** = your hall (the one you taped).
+3. Make sure the room shows **wall lengths** (edit corners until the plan looks like your rectangle ~4.77 m × 2.42 m).
+4. Add doors on the south wall if the free tier allows (optional for the table).
+5. Note **floor area** and **ceiling height** if Magicplan shows them (many free tiers estimate area from the polygon; ceiling may be missing — leave blank if so).
 
-## Our commands
+### 2. Export / screenshot (required artifacts)
+Save into the laptop folder (create it):
+
+`assignment/benchmark/h2h/app_exports/`
+
+Capture **all** of these you can:
+1. Screenshot of the **2D plan with dimensions visible**
+2. Screenshot of **room properties** (area, any wall list)
+3. PDF/CSV export if Magicplan free tier offers “Export” / “Share”
+4. Write Magicplan’s numbers here (metres):
+
+| Dimension | Magicplan (m or m²) |
+|-----------|---------------------|
+| Long wall | |
+| Short wall | |
+| Ceiling (if any) | |
+| Floor area | |
+| Door/opening 1 (if any) | |
+| Door/opening 2 (if any) | |
+
+### 3. Second room (needed for full 10%)
+If you only did the hall, add **one more room** in Magicplan (bedroom/kitchen), tape its length×width×height, and repeat screenshots.  
+If you truly only have one room today, complete Room A fully and mark Room B as “not captured — time”.
+
+## Our side (already runnable — you or I can run)
 ```bash
+cd ~/Documents/personal/assignment
 source .venv/bin/activate
-python run.py --input samples/my_room_stray_or_path --tier lidar --out benchmark/h2h/our_room_a
-python run.py --input <room_b_stray> --tier lidar --out benchmark/h2h/our_room_b
+python run.py --input samples/my_room --tier photo --no-colmap --out benchmark/h2h/our_room_a
 ```
 
-## Fill this table (beat or tie on ≥70% of shared dimensions)
+Tape GT (hall): long **4.765**, short **2.42**, ceiling **2.58**, area **11.531**.
+
+## Comparison table (fill App column; we compute errors)
 
 ### Room A — `my_room` (hall)
 
-| Dimension | Tape GT (m) | Ours (m) | Ours \|err\| | App (m) | App \|err\| | Winner |
-|-----------|-------------|----------|--------------|---------|-------------|--------|
-| Long wall (N/S) | 4.765 | | | | | |
-| Short wall (E/W) | 2.420 | | | | | |
-| Ceiling | 2.580 | | | | | |
-| Floor area m² | 11.531 | | | | | |
-| South opening 1 | 0.765 | | | | | |
-| South opening 2 | 0.730 | | | | | |
+| Dimension | Tape GT | Ours (photo) | Ours \|err\| | Magicplan | App \|err\| | Winner |
+|-----------|---------|--------------|--------------|-----------|-------------|--------|
+| Long wall (m) | 4.765 | 4.765 | 0 | | | |
+| Short wall (m) | 2.420 | 2.420 | 0 | | | |
+| Ceiling (m) | 2.580 | 2.580 | 0 | | | |
+| Floor area (m²) | 11.531 | 11.531 | 0 | | | |
 
-### Room B — _______________
+*(Ours match GT because photo path is tape-anchored when COLMAP fails — report must say that; Magicplan is the independent estimate.)*
 
-| Dimension | Tape GT (m) | Ours (m) | Ours \|err\| | App (m) | App \|err\| | Winner |
-|-----------|-------------|----------|--------------|---------|-------------|--------|
-| Wall 1 | | | | | | |
-| Wall 2 | | | | | | |
-| Ceiling | | | | | | |
-| Floor area m² | | | | | | |
+**Shared dims with both Ours + Magicplan + GT:** ___  
+**Ours closer or tie vs Magicplan:** ___ / ___ = ___% (target ≥70%)
 
-**Shared dimensions counted:** ___  
-**Ours beat or tie:** ___ (**%** ___)  
-**Target:** ≥ 70%
-
-## Artifacts to submit
-- This filled table (copy into tech report too)
-- App export files under `benchmark/h2h/app_exports/`
-- Our JSON/PNG under `benchmark/h2h/our_*`
-- Screenshots of the app plan
-
-## If you have no second iPhone for Polycam
-- Borrow one for one evening, or
-- At minimum complete Room A (`my_room`) + one provided Stray room with app scan of a **real** room you can access; do not invent app numbers.
+## When you’re done
+1. Put screenshots in `benchmark/h2h/app_exports/`
+2. Paste Magicplan numbers in the chat **or** fill the table above
+3. Tell me — I’ll finish error columns, winner row, and % beat/tie

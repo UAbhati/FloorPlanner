@@ -4,8 +4,17 @@ __pycache__/
 .DS_Store
 out/
 *.egg-info/
-# Large Stray / phone captures stay local; keep sample READMEs for protocol.
-samples/*
-!samples/*/
-!samples/*/README.md
 benchmark/runs/
+
+# Raw captures stay local (not in git).
+samples/*
+samples/*/
+samples/*/README.md
+
+# Working notes / process docs — keep local unless explicitly asked to ship.
+memory.md
+NOTES.md
+docs/WALKIN_CHECKLIST.md
+docs/COMPLIANCE_MATRIX.md
+docs/CAPTURE_PROTOCOL.md
+benchmark/HEAD_TO_HEAD.md

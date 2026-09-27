@@ -44,6 +44,8 @@ from reconstruction.room_polygon import (  # noqa: E402
     extract_wall_band,
     project_to_horizontal,
 )
+from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
+
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -223,6 +225,8 @@ def run_media_tier(
     tier: str,
     ref_length_m: float | None,
     ref_width_m: float | None,
+    *,
+    use_colmap: bool = True,
 ) -> dict:
     if tier == "photo":
         photo_dir = resolve_photo_dir(capture_dir)
@@ -231,21 +235,51 @@ def run_media_tier(
     else:
         video = resolve_video(capture_dir)
         frame_dir = out_dir / f"{capture_dir.name}_video_frames"
-        images = extract_video_frames(video, frame_dir, max_frames=8)
+        images = extract_video_frames(video, frame_dir, max_frames=16)
         media_note = f"video={video.name} extracted_frames={len(images)}"
 
     length, width, ceiling_m, openings, scale_src = _resolve_rect_dims(
         capture_dir, ref_length_m, ref_width_m
     )
-    # Tape/GT or CLI refs are known metric — not low-confidence geometry.
-    room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
 
-    # Ceiling CI: photo/video widen honestly when we only have tape/GT or none.
-    if ceiling_m is not None:
-        frac = 0.08 if tier == "photo" else 0.03
-        ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
+    sfm_notes = ""
+    room: RoomPolygon | None = None
+    ceiling = None
+
+    if use_colmap:
+        workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
+        try:
+            sfm = reconstruct_metric_room(images, workspace, ref_length_m=length)
+            room = sfm.room
+            sfm_notes = sfm.notes
+            if sfm.ceiling_height_m is not None:
+                frac = TIER_WALL_FRAC[tier]
+                h = sfm.ceiling_height_m
+                # Rough percentile gets a wider CI than a plane fit.
+                pad = max(h * frac, 0.15 if sfm.ceiling_source == "plane" else 0.5)
+                ceiling = measurement(h, h - pad, h + pad)
+            media_note = f"{media_note}; colmap_ok"
+        except SfMError as exc:
+            sfm_notes = f"colmap_failed={exc}"
+            media_note = f"{media_note}; colmap_fallback_ref_rectangle"
+
+    if room is None:
+        room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
+        if ceiling is None:
+            if ceiling_m is not None:
+                frac = 0.08 if tier == "photo" else 0.03
+                ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
+            else:
+                ceiling = measurement(2.5, 1.5, 3.5)
+        method_note = f"method=ref_rectangle; scale_source={scale_src}"
     else:
-        ceiling = measurement(0.0, 0.0, 5.0)
+        method_note = f"method=colmap_sfm; scale_source={scale_src}; {sfm_notes}"
+        if ceiling is None:
+            if ceiling_m is not None:
+                frac = TIER_WALL_FRAC[tier]
+                ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
+            else:
+                ceiling = measurement(2.5, 1.5, 3.5)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
@@ -253,9 +287,8 @@ def run_media_tier(
 
     room_json = _room_to_json(room, capture_dir.name, ceiling, tier)
     notes = (
-        f"method=ref_rectangle; scale_source={scale_src}; {media_note}. "
-        "No depth/poses on Android — intervals use tier calibration "
-        f"(walls ±{int(TIER_WALL_FRAC[tier]*100)}%). SfM metric path is follow-up."
+        f"{method_note}; {media_note}. "
+        f"Wall CIs use tier calibration (±{int(TIER_WALL_FRAC[tier]*100)}%)."
     )
     return {
         "capture_id": capture_dir.name,
@@ -283,15 +316,26 @@ def main() -> None:
     parser.add_argument("--out", required=True, type=Path, help="output directory")
     parser.add_argument("--ref-length-m", type=float, default=None, help="photo/video long-wall metres")
     parser.add_argument("--ref-width-m", type=float, default=None, help="photo/video short-wall metres")
+    parser.add_argument(
+        "--no-colmap",
+        action="store_true",
+        help="skip COLMAP and use ref-rectangle layout for photo/video",
+    )
     args = parser.parse_args()
 
     if args.tier == "lidar":
         output = run_lidar_tier(args.input, args.out)
     else:
-        output = run_media_tier(args.input, args.out, args.tier, args.ref_length_m, args.ref_width_m)
+        output = run_media_tier(
+            args.input,
+            args.out,
+            args.tier,
+            args.ref_length_m,
+            args.ref_width_m,
+            use_colmap=not args.no_colmap,
+        )
 
     json_path = _emit(output, args.out, args.input.name if args.tier == "lidar" else f"{args.input.name}_{args.tier}")
-    # For media tiers we used a suffixed json name; also keep plan path printed.
     print(f"wrote {json_path}")
     print(f"wrote {output['stitched_plan']['rendered_plan_path']}")
     print(f"notes: {output['drift_correction']['notes']}")

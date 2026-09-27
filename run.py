@@ -41,7 +41,7 @@ from reconstruction.planes import (  # noqa: E402
     rough_height_above_floor,
 )
 from reconstruction.pointcloud import build_point_cloud  # noqa: E402
-from reconstruction.render import render_room_plan  # noqa: E402
+from reconstruction.render import render_room_plan, render_stitched_plan  # noqa: E402
 from reconstruction.room_polygon import (  # noqa: E402
     RoomPolygon,
     build_room_polygon,
@@ -49,6 +49,7 @@ from reconstruction.room_polygon import (  # noqa: E402
     project_to_horizontal,
 )
 from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
+from reconstruction.stitch import stitch_from_gt  # noqa: E402
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -403,9 +404,61 @@ def run_media_tier(
     }
 
 
+def run_stitch_gt(room_ids: list[str], out_dir: Path, tier: str, *, align_openings: bool) -> dict:
+    """Build a stitched whole-property plan from GT rectangles (hall + bedroom)."""
+    result = stitch_from_gt(GT_PATH, room_ids, align_openings=align_openings)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    suffix = "drift_on" if align_openings else "drift_off"
+    plan_path = out_dir / f"stitched_{'_'.join(room_ids)}_{tier}_{suffix}_plan.png"
+    render_stitched_plan(
+        [(p.room_id, p.room) for p in result.rooms],
+        plan_path,
+        title=f"Stitched ({tier}, {suffix})",
+        footprint_area_m2=result.footprint_area_m2,
+    )
+
+    rooms_json = []
+    for i, placed in enumerate(result.rooms):
+        gt = load_ground_truth(GT_PATH, placed.room_id)
+        ceil_m = gt.ceiling_height_m if gt else None
+        if ceil_m is not None:
+            frac = TIER_WALL_FRAC[tier]
+            ceiling = measurement(ceil_m, ceil_m * (1 - frac), ceil_m * (1 + frac))
+        else:
+            ceiling = measurement(2.5, 1.5, 3.5)
+        room_json = _room_to_json(placed.room, placed.room_id, ceiling, tier)
+        room_json["id"] = f"room_{i}"
+        damage, scope = empty_damage_for_lidar(placed.room)
+        room_json["damage_regions"] = damage
+        room_json["scope_line_items"] = scope
+        rooms_json.append(room_json)
+
+    area_frac = TIER_AREA_FRAC[tier]
+    am = max(0.5, result.footprint_area_m2 * area_frac)
+    return {
+        "capture_id": "+".join(room_ids),
+        "tier": tier,
+        "device": "GT rectangles + opening-anchored stitch (Android Magicplan property)",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "rooms": rooms_json,
+        "stitched_plan": {
+            "room_ids": [p.room_id for p in result.rooms],
+            "adjacency": result.adjacency,
+            "footprint_area": measurement(
+                result.footprint_area_m2, result.footprint_area_m2 - am, result.footprint_area_m2 + am
+            ),
+            "rendered_plan_path": str(plan_path),
+        },
+        "drift_correction": {
+            "method_used": result.method,
+            "notes": result.notes + f"; ablation_pair=use --drift-align off/on; tier={tier}",
+        },
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", required=True, type=Path, help="capture directory")
+    parser.add_argument("--input", type=Path, default=None, help="capture directory")
     parser.add_argument("--tier", required=True, choices=["lidar", "photo", "video"])
     parser.add_argument("--out", required=True, type=Path, help="output directory")
     parser.add_argument("--ref-length-m", type=float, default=None, help="photo/video long-wall metres")
@@ -421,21 +474,42 @@ def main() -> None:
         default="auto",
         help="LiDAR wall polygon method (hull = fix-loop before baseline)",
     )
+    parser.add_argument(
+        "--stitch-gt",
+        type=str,
+        default=None,
+        help="comma-separated GT room_ids to stitch (e.g. my_room,bedroom)",
+    )
+    parser.add_argument(
+        "--drift-align",
+        choices=["on", "off"],
+        default="on",
+        help="for --stitch-gt: opening-center align (on) vs left-align ablation (off)",
+    )
     args = parser.parse_args()
 
-    if args.tier == "lidar":
-        output = run_lidar_tier(args.input, args.out, wall_method=args.wall_method)
+    if args.stitch_gt:
+        room_ids = [r.strip() for r in args.stitch_gt.split(",") if r.strip()]
+        output = run_stitch_gt(room_ids, args.out, args.tier, align_openings=(args.drift_align == "on"))
+        json_path = _emit(output, args.out, f"stitched_{'_'.join(room_ids)}_{args.tier}_{args.drift_align}")
     else:
-        output = run_media_tier(
-            args.input,
-            args.out,
-            args.tier,
-            args.ref_length_m,
-            args.ref_width_m,
-            use_colmap=not args.no_colmap,
+        if args.input is None:
+            raise SystemExit("--input is required unless --stitch-gt is set")
+        if args.tier == "lidar":
+            output = run_lidar_tier(args.input, args.out, wall_method=args.wall_method)
+        else:
+            output = run_media_tier(
+                args.input,
+                args.out,
+                args.tier,
+                args.ref_length_m,
+                args.ref_width_m,
+                use_colmap=not args.no_colmap,
+            )
+        json_path = _emit(
+            output, args.out, args.input.name if args.tier == "lidar" else f"{args.input.name}_{args.tier}"
         )
 
-    json_path = _emit(output, args.out, args.input.name if args.tier == "lidar" else f"{args.input.name}_{args.tier}")
     print(f"wrote {json_path}")
     print(f"wrote {output['stitched_plan']['rendered_plan_path']}")
     print(f"notes: {output['drift_correction']['notes']}")

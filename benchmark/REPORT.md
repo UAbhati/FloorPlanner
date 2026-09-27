@@ -1,6 +1,6 @@
 # Benchmark report
 
-Generated: 2026-09-27T10:09:07.077530+00:00
+Generated: 2026-09-27T11:19:21.288339+00:00
 
 Regenerate: `python benchmark/run_benchmark.py`
 
@@ -15,13 +15,13 @@ Regenerate: `python benchmark/run_benchmark.py`
 
 | Label | Tier | OK | Time (s) | Area m² | Ceiling m | Walls | Openings |
 |-------|------|----|----------|---------|-----------|-------|----------|
-| stray_ceiling_lidar | lidar | yes | 4.27 | 139.295 | 1.834 | 4 | 3 |
-| stray_ceiling_photo | photo | yes | 11.69 | 139.295 | 1.834 | 4 | 3 |
-| stray_ceiling_video | video | yes | 12.08 | 139.295 | 1.834 | 4 | 3 |
-| stray_room_lidar | lidar | yes | 2.46 | 35.118 | 2.5 | 4 | 2 |
-| stray_floor_lidar | lidar | yes | 2.72 | 112.869 | 1.833 | 4 | 1 |
-| my_room_photo | photo | yes | 0.84 | 11.531 | 2.58 | 4 | 2 |
-| my_room_video | video | yes | 1.22 | 11.531 | 2.58 | 4 | 2 |
+| stray_ceiling_lidar | lidar | yes | 4.28 | 139.295 | 1.834 | 4 | 3 |
+| stray_ceiling_photo | photo | yes | 11.26 | 139.295 | 1.834 | 4 | 3 |
+| stray_ceiling_video | video | yes | 11.38 | 139.295 | 1.834 | 4 | 3 |
+| stray_room_lidar | lidar | yes | 2.37 | 35.118 | 2.5 | 4 | 2 |
+| stray_floor_lidar | lidar | yes | 2.66 | 112.869 | 1.833 | 4 | 1 |
+| my_room_photo | photo | yes | 0.81 | 11.664 | 2.58 | 4 | 2 |
+| my_room_video | video | yes | 1.2 | 11.664 | 2.58 | 4 | 2 |
 
 ## Gate table (self-scored)
 
@@ -42,9 +42,9 @@ Regenerate: `python benchmark/run_benchmark.py`
 
 | Metric | GT | Photo output |
 |--------|----|--------------|
-| Floor area m² | 11.5313 | 11.531 |
+| Floor area m² | 11.6644 | 11.664 |
 | Ceiling m | 2.58 | 2.58 |
-| Long walls m | 4.765 | 4.765 (rect) |
+| Long walls m | 4.82 | 4.82 (rect) |
 | Short walls m | 2.42 | 2.42 (rect) |
 
 Note: photo/video numbers equal GT because COLMAP was too thin and the ref-rectangle path is tape-anchored. Intervals are still widened to tier widths.

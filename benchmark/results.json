@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-27T10:09:07.076131+00:00",
+  "generated_at": "2026-09-27T11:19:21.286745+00:00",
   "runs": [
     {
       "label": "stray_ceiling_lidar",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar",
       "ok": true,
-      "elapsed_s": 4.27,
+      "elapsed_s": 4.28,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling_plan.png\nnotes: wall_method=oriented_rect_large; low_confidence=True. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json",
@@ -28,7 +28,7 @@
       "label": "stray_ceiling_photo",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier photo --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo",
       "ok": true,
-      "elapsed_s": 11.69,
+      "elapsed_s": 11.26,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo_plan.png\nnotes: method=stray_metric_cloud; tier=photo; wall_method=oriented_rect_large; low_confidence=True. ceiling_ok. Wall CIs widened to \u00b18% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json",
@@ -51,7 +51,7 @@
       "label": "stray_ceiling_video",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier video --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video",
       "ok": true,
-      "elapsed_s": 12.08,
+      "elapsed_s": 11.38,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video_plan.png\nnotes: method=stray_metric_cloud; tier=video; wall_method=oriented_rect_large; low_confidence=True. ceiling_ok. Wall CIs widened to \u00b13% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json",
@@ -74,7 +74,7 @@
       "label": "stray_room_lidar",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_room --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar",
       "ok": true,
-      "elapsed_s": 2.46,
+      "elapsed_s": 2.37,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar/single_room.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar/single_room_plan.png\nnotes: wall_method=oriented_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_room_lidar/single_room.json",
@@ -97,7 +97,7 @@
       "label": "stray_floor_lidar",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_floor --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar",
       "ok": true,
-      "elapsed_s": 2.72,
+      "elapsed_s": 2.66,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor_plan.png\nnotes: wall_method=oriented_rect_large; low_confidence=True. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_floor_lidar/single_scan_floor.json",
@@ -120,7 +120,7 @@
       "label": "my_room_photo",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo",
       "ok": true,
-      "elapsed_s": 0.84,
+      "elapsed_s": 0.81,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=17 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_photo/my_room_photo.json",
@@ -128,12 +128,12 @@
       "capture_id": "my_room",
       "n_walls": 4,
       "wall_lengths_m": [
-        4.765,
+        4.82,
         2.42,
-        4.765,
+        4.82,
         2.42
       ],
-      "floor_area_m2": 11.531,
+      "floor_area_m2": 11.664,
       "ceiling_height_m": 2.58,
       "n_openings": 2,
       "n_damage": 6,
@@ -143,7 +143,7 @@
       "label": "my_room_video",
       "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video",
       "ok": true,
-      "elapsed_s": 1.22,
+      "elapsed_s": 1.2,
       "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_video/my_room_video.json",
@@ -151,12 +151,12 @@
       "capture_id": "my_room",
       "n_walls": 4,
       "wall_lengths_m": [
-        4.765,
+        4.82,
         2.42,
-        4.765,
+        4.82,
         2.42
       ],
-      "floor_area_m2": 11.531,
+      "floor_area_m2": 11.664,
       "ceiling_height_m": 2.58,
       "n_openings": 2,
       "n_damage": 5,
@@ -165,21 +165,21 @@
   ],
   "my_room_gt": {
     "walls": {
-      "north": 4.765,
-      "south": 4.765,
+      "north": 4.82,
+      "south": 4.82,
       "west": 2.42,
       "east": 2.42
     },
     "ceiling": 2.58,
-    "area": 11.5313,
+    "area": 11.6644,
     "openings": [
       {
         "wall": "south",
-        "width": 0.765
+        "width": 0.88
       },
       {
         "wall": "south",
-        "width": 0.73
+        "width": 0.77
       }
     ]
   }

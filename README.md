@@ -32,11 +32,13 @@ python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
 python run.py --input samples/my_room --tier photo --out out/   # needs GT or --ref-length-m/--ref-width-m
 ```
 
-## Reproduce benchmark tables
+## Multi-room stitch (hall + bedroom)
 
 ```bash
-python benchmark/run_benchmark.py   # → benchmark/REPORT.md + results.json
-python fix_loop/regenerate.py       # → fix_loop/before + after
+# Opening-anchored placement (drift correction ON)
+python run.py --stitch-gt my_room,bedroom --tier photo --drift-align on --out out/stitch
+# Ablation without door alignment (drift OFF)
+python run.py --stitch-gt my_room,bedroom --tier photo --drift-align off --out out/stitch
 ```
 
 ## Docs

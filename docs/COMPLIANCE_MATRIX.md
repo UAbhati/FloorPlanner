@@ -11,13 +11,14 @@
 | Ceiling / walls / openings | `reconstruction/` | Done (limits documented) |
 | Damage + scope | `reconstruction/damage.py` | Done (rule-based) |
 | Fix loop | [fix_loop/](../fix_loop/) | Done |
-| Benchmark report (regen) | [benchmark/REPORT.md](../benchmark/REPORT.md), `run_benchmark.py` | Done |
-| Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | `my_room` only |
-| Head-to-head vs consumer app | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | **Template — you must fill** |
-| Multi-room stitch + adjacency | stub | **FAIL** (documented) |
-| Drift ≠ poses_as_is on multi-room | — | **FAIL** (documented) |
+| Benchmark report (regen) | [benchmark/REPORT.md](../benchmark/REPORT.md) | Done |
+| Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | Hall + bedroom |
+| Head-to-head vs Magicplan | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | Done (Android; method disclosed) |
+| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-gt` | Done (GT rectangles; 2 rooms) |
+| Drift ≠ poses_as_is | `--drift-align on` → `plane_anchored_correction`; off ablation | Done for stitch path |
 | Repeatability second capture | — | **NOT RUN** |
 | Technical report ≤6 pages | — | **Not started** |
+| Independent COLMAP metric photo | — | Fail on hall (fallback) |
 | Process evidence | git log | Ongoing |
 | Decision log | [memory.md](../memory.md) | Done |
 | README <15 min | [README.md](../README.md) | Done |

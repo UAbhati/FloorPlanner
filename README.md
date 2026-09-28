@@ -2,13 +2,31 @@
 
 Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON + top-down plan.
 
-## Setup (macOS, ~5–15 min)
+**Capture (non-engineer):** follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally — install the App Store tools, walk the room, hand over the export folder.  
+**Pipeline (this README):** clone → setup → one command per capture on a clean macOS machine (<15 min).
+
+## Clone + setup (macOS, ~5–15 min)
+
+**Prerequisites:** [Homebrew](https://brew.sh), Python 3.12, git.
 
 ```bash
+git clone https://github.com/UAbhati/FloorPlanner.git
+cd FloorPlanner
+
+# System tools (once per machine)
+brew install python@3.12 ffmpeg colmap
+
+# Python env
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-brew install ffmpeg colmap   # once
+```
+
+Confirm the CLI:
+
+```bash
+source .venv/bin/activate
+python run.py --help
 ```
 
 ## Samples: what you get vs what you drop in

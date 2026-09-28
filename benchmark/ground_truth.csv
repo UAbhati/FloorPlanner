@@ -10,7 +10,7 @@ my_room,floor_area_m2,,11.6644,product_of_length_x_width
 my_room,opening_width,south,0.88,door_with_frame; tape_cm=88; from_left_m=UNKNOWN
 my_room,opening_width,south,0.77,passage_no_frame; tape_cm=77; from_left_m=UNKNOWN
 my_room,opening_width,north,0.90,CLOSED_door_exclude_from_opening_gate; height_m=2.11; door_was_closed_in_capture
-my_room,opening_width,west,0.77,door_to_kitchen; tape_cm=77; added_2026-09-27_with_my_kitchen_capture
+my_room,opening_width,west,0.77,EXCLUDE_window_not_in_magicplan; door_to_kitchen_for_3room_stitch_only; tape_cm=77
 my_bedroom,wall_length,west,1.95,tape_cm=195
 my_bedroom,wall_length,east,1.95,assumed_equal_to_west
 my_bedroom,wall_length,south,2.43,tape_cm=243

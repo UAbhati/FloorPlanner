@@ -2,7 +2,7 @@
   "capture_id": "my_room+my_bedroom+my_kitchen",
   "tier": "photo",
   "device": "GT rectangles + opening-anchored stitch (Android Magicplan property)",
-  "generated_at": "2026-09-27T12:40:16.965848+00:00",
+  "generated_at": "2026-09-28T11:44:14.307118+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -197,19 +197,19 @@
       "name": "my_bedroom",
       "polygon": [
         [
-          0.3916666666666666,
+          0.0,
           -1.95
         ],
         [
-          2.8216666666666668,
+          2.43,
           -1.95
         ],
         [
-          2.8216666666666668,
+          2.43,
           0.0
         ],
         [
-          0.3916666666666666,
+          0.0,
           0.0
         ]
       ],
@@ -217,11 +217,11 @@
         {
           "id": "wall_0",
           "start": [
-            0.3916666666666666,
+            0.0,
             -1.95
           ],
           "end": [
-            2.8216666666666668,
+            2.43,
             -1.95
           ],
           "length": {
@@ -234,11 +234,11 @@
         {
           "id": "wall_1",
           "start": [
-            2.8216666666666668,
+            2.43,
             -1.95
           ],
           "end": [
-            2.8216666666666668,
+            2.43,
             0.0
           ],
           "length": {
@@ -251,11 +251,11 @@
         {
           "id": "wall_2",
           "start": [
-            2.8216666666666668,
+            2.43,
             0.0
           ],
           "end": [
-            0.3916666666666666,
+            0.0,
             0.0
           ],
           "length": {
@@ -268,11 +268,11 @@
         {
           "id": "wall_3",
           "start": [
-            0.3916666666666666,
+            0.0,
             0.0
           ],
           "end": [
-            0.3916666666666666,
+            0.0,
             -1.95
           ],
           "length": {
@@ -340,32 +340,32 @@
       "name": "my_kitchen",
       "polygon": [
         [
-          -2.25,
-          0.38
+          2.5700000000000003,
+          -1.66
         ],
         [
-          0.0,
-          0.38
+          4.82,
+          -1.66
         ],
         [
-          0.0,
-          2.04
+          4.82,
+          0.0
         ],
         [
-          -2.25,
-          2.04
+          2.5700000000000003,
+          0.0
         ]
       ],
       "walls": [
         {
           "id": "wall_0",
           "start": [
-            -2.25,
-            0.38
+            2.5700000000000003,
+            -1.66
           ],
           "end": [
-            0.0,
-            0.38
+            4.82,
+            -1.66
           ],
           "length": {
             "value_m": 2.25,
@@ -377,12 +377,12 @@
         {
           "id": "wall_1",
           "start": [
-            0.0,
-            0.38
+            4.82,
+            -1.66
           ],
           "end": [
-            0.0,
-            2.04
+            4.82,
+            0.0
           ],
           "length": {
             "value_m": 1.66,
@@ -394,12 +394,12 @@
         {
           "id": "wall_2",
           "start": [
-            0.0,
-            2.04
+            4.82,
+            0.0
           ],
           "end": [
-            -2.25,
-            2.04
+            2.5700000000000003,
+            0.0
           ],
           "length": {
             "value_m": 2.25,
@@ -411,12 +411,12 @@
         {
           "id": "wall_3",
           "start": [
-            -2.25,
-            2.04
+            2.5700000000000003,
+            0.0
           ],
           "end": [
-            -2.25,
-            0.38
+            2.5700000000000003,
+            -1.66
           ],
           "length": {
             "value_m": 1.66,
@@ -494,7 +494,12 @@
       {
         "room_a": "my_room",
         "room_b": "my_kitchen",
-        "shared_wall_id": "my_room_west__my_kitchen_east"
+        "shared_wall_id": "my_room_south__my_kitchen_north"
+      },
+      {
+        "room_a": "my_bedroom",
+        "room_b": "my_kitchen",
+        "shared_wall_id": "my_bedroom_east__my_kitchen_west"
       }
     ],
     "footprint_area": {
@@ -506,7 +511,7 @@
     "rendered_plan_path": "benchmark/h2h/stitched/stitched_my_room_my_bedroom_my_kitchen_photo_drift_on_plan.png"
   },
   "drift_correction": {
-    "method_used": "plane_anchored_correction",
-    "notes": "my_room-my_bedroom: opening_aligned shared_width\u22480.88m on south/north; my_room-my_kitchen: opening_aligned shared_width\u22480.77m on west/east; ablation_pair=use --drift-align off/on; tier=photo"
+    "method_used": "poses_as_is",
+    "notes": "my_room-my_bedroom: opening alignment skipped (\u0394u=0.392m would overlap kitchen); my_room-my_kitchen: no opening alignment (fixed position maintains 14cm wall gap); ablation_pair=use --drift-align off/on; tier=photo"
   }
 }

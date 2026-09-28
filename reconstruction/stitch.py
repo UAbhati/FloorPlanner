@@ -162,6 +162,7 @@ def stitch_from_gt(
 
 CARDINAL_TO_WALL_ID = {"south": "wall_0", "east": "wall_1", "north": "wall_2", "west": "wall_3"}
 OPPOSITE_CARDINAL = {"south": "north", "north": "south", "east": "west", "west": "east"}
+PERPENDICULAR_AXIS = {"south": 0, "north": 0, "east": 1, "west": 1}  # u=0, v=1
 
 
 @dataclass
@@ -218,6 +219,120 @@ def _attach_room(
 
     placed = _translate_room(child, delta)
     return placed, delta, method, notes
+
+
+def stitch_three_rooms_property(
+    gt_csv,
+    *,
+    align_openings: bool = True,
+) -> StitchResult:
+    """Special case: stitch my_room (hall), my_bedroom, my_kitchen to match
+    the Magicplan property layout where bedroom and kitchen are side-by-side
+    along the hall's south wall, with a 14cm dividing wall between them.
+
+    Hall: 4.82m (E-W) × 2.42m (N-S) at origin from (0,0) to (4.82, 2.42)
+    Bedroom: 2.43m × 1.95m south of hall's western portion
+    Wall gap: 0.14m (14cm) between bedroom and kitchen
+    Kitchen: 2.25m × 1.66m south of hall's eastern portion
+    Total: 2.43m + 0.14m + 2.25m = 4.82m = Hall length ✓
+    """
+    # Load GT rectangles
+    gt_hall = load_ground_truth(gt_csv, "my_room")
+    gt_bed = load_ground_truth(gt_csv, "my_bedroom")
+    gt_kit = load_ground_truth(gt_csv, "my_kitchen")
+
+    if any(gt is None or gt.length_m is None or gt.width_m is None for gt in [gt_hall, gt_bed, gt_kit]):
+        raise ValueError("missing GT for my_room, my_bedroom, or my_kitchen")
+
+    # Create room polygons (all rectangles in local coords)
+    hall = rectangle_room(gt_hall.length_m, gt_hall.width_m, gt_hall.ceiling_height_m, gt_hall.openings, low_confidence=False)
+    bedroom = rectangle_room(gt_bed.length_m, gt_bed.width_m, gt_bed.ceiling_height_m, gt_bed.openings, low_confidence=False)
+    kitchen = rectangle_room(gt_kit.length_m, gt_kit.width_m, gt_kit.ceiling_height_m, gt_kit.openings, low_confidence=False)
+
+    # Place hall at origin (0,0) to (4.82, 2.42)
+    # Hall wall_0 (south wall) runs from (0,0) to (4.82, 0)
+
+    # Wall thickness between bedroom and kitchen (from Magicplan)
+    wall_thickness_m = 0.14  # 14cm
+
+    # Bedroom attaches to hall's south wall, western portion
+    # Bedroom in local coords: (0,0) to (2.43, 1.95)
+    # Translate bedroom down by its width: (u_offset, -1.95)
+    # Position at western end: u_offset = 0
+    bed_u_base = 0.0
+    bed_delta = np.array([bed_u_base, -gt_bed.width_m])
+
+    # Kitchen attaches to hall's south wall, eastern portion
+    # Kitchen: (0,0) to (2.25, 1.66)
+    # Kitchen starts after: bedroom (2.43m) + wall (0.14m) = 2.57m
+    kit_u_base = gt_bed.length_m + wall_thickness_m
+    kit_delta = np.array([kit_u_base, -gt_kit.width_m])
+
+    bed_placed = _translate_room(bedroom, bed_delta)
+    kit_placed = _translate_room(kitchen, kit_delta)
+
+    # Opening alignment adjustments (along the perpendicular axis to shared wall)
+    notes_parts = []
+    method_set = set()
+
+    # Hall-Bedroom connection (hall south wall, bedroom north wall)
+    hall_south_opening = _pick_opening(hall, "wall_0", 0.88)  # hall's 0.88m opening
+    bed_north_opening = _pick_opening(bed_placed, "wall_2", 0.88)  # bedroom's 0.88m opening on north
+
+    if align_openings and hall_south_opening and bed_north_opening:
+        hall_c = _opening_center(hall, hall_south_opening)
+        bed_c = _opening_center(bed_placed, bed_north_opening)
+        # Calculate proposed shift along u-axis (east-west)
+        proposed_shift = hall_c[0] - bed_c[0]
+
+        # Check if shift would cause overlap with kitchen
+        # Bedroom's east edge after shift should not exceed kitchen's west edge
+        bed_east_after_shift = bed_u_base + gt_bed.length_m + proposed_shift
+        kitchen_west = kit_u_base
+
+        if bed_east_after_shift <= kitchen_west:
+            # Safe to apply alignment
+            bed_delta[0] += proposed_shift
+            bed_placed = _translate_room(bedroom, bed_delta)
+            method_set.add("plane_anchored_correction")
+            notes_parts.append(f"my_room-my_bedroom: opening_aligned Δu={proposed_shift:.3f}m on south/north")
+        else:
+            # Would cause overlap; skip alignment
+            method_set.add("poses_as_is")
+            notes_parts.append(f"my_room-my_bedroom: opening alignment skipped (Δu={proposed_shift:.3f}m would overlap kitchen)")
+    else:
+        method_set.add("poses_as_is")
+        notes_parts.append("my_room-my_bedroom: no opening alignment (ablation) on south/north")
+
+    # Hall-Kitchen connection
+    # Keep kitchen at fixed position to maintain wall gap; no alignment to prevent overlap
+    notes_parts.append("my_room-my_kitchen: no opening alignment (fixed position maintains 14cm wall gap)")
+    method_set.add("poses_as_is")
+
+    # Adjacency: hall-bedroom, hall-kitchen, bedroom-kitchen (shared dividing wall)
+    adjacency = [
+        {"room_a": "my_room", "room_b": "my_bedroom", "shared_wall_id": "my_room_south__my_bedroom_north"},
+        {"room_a": "my_room", "room_b": "my_kitchen", "shared_wall_id": "my_room_south__my_kitchen_north"},
+        {"room_a": "my_bedroom", "room_b": "my_kitchen", "shared_wall_id": "my_bedroom_east__my_kitchen_west"},
+    ]
+
+    rooms = [
+        PlacedRoom(room_id="my_room", room=hall, translation=np.zeros(2)),
+        PlacedRoom(room_id="my_bedroom", room=bed_placed, translation=bed_delta),
+        PlacedRoom(room_id="my_kitchen", room=kit_placed, translation=kit_delta),
+    ]
+
+    footprint = hall.floor_area_m2 + bedroom.floor_area_m2 + kitchen.floor_area_m2
+    # Report method based on whether opening alignment was used for the primary connection (bedroom)
+    combined_method = "plane_anchored_correction" if align_openings and "plane_anchored_correction" in method_set else "poses_as_is"
+
+    return StitchResult(
+        rooms=rooms,
+        adjacency=adjacency,
+        footprint_area_m2=footprint,
+        method=combined_method,
+        notes="; ".join(notes_parts),
+    )
 
 
 def stitch_chain_from_gt(

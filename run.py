@@ -51,14 +51,10 @@ from reconstruction.room_polygon import (  # noqa: E402
     project_to_horizontal,
 )
 from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
-from reconstruction.stitch import StitchEdge, stitch_chain_from_gt, stitch_from_gt  # noqa: E402
-
-# Fixed topology for the 3-room benchmark set (hall is the star center).
-# See benchmark/ground_truth.csv for the tape-measured opening widths.
-THREE_ROOM_EDGES = [
-    StitchEdge(parent_id="my_room", parent_cardinal="south", child_id="my_bedroom", shared_width_m=0.88),
-    StitchEdge(parent_id="my_room", parent_cardinal="west", child_id="my_kitchen", shared_width_m=0.77),
-]
+from reconstruction.stitch import (  # noqa: E402
+    stitch_from_gt,
+    stitch_three_rooms_property,
+)
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -417,12 +413,11 @@ def run_stitch_gt(room_ids: list[str], out_dir: Path, tier: str, *, align_openin
     """Build a stitched whole-property plan from GT rectangles.
 
     2 rooms: hall + bedroom (original pairwise stitch).
-    3 rooms (my_room, my_bedroom, my_kitchen, any order): fixed star topology
-    in THREE_ROOM_EDGES (hall is the center; bedroom and kitchen each attach
-    via their own tape-measured opening).
+    3 rooms (my_room, my_bedroom, my_kitchen, any order): specialized property
+    layout with bedroom and kitchen side-by-side on hall's west wall.
     """
     if set(room_ids) == {"my_room", "my_bedroom", "my_kitchen"}:
-        result = stitch_chain_from_gt(GT_PATH, "my_room", THREE_ROOM_EDGES, align_openings=align_openings)
+        result = stitch_three_rooms_property(GT_PATH, align_openings=align_openings)
     else:
         result = stitch_from_gt(GT_PATH, room_ids, align_openings=align_openings)
     out_dir.mkdir(parents=True, exist_ok=True)

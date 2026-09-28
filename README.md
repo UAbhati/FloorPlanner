@@ -2,7 +2,7 @@
 
 Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON + top-down plan.
 
-**Capture (non-engineer):** follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally — install the App Store tools, walk the room, hand over the export folder.  
+**Capture (non-engineer):** follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally — install the App Store tools, walk the room, hand over the export folder.
 **Pipeline (this README):** clone → setup → one command per capture on a clean macOS machine (<15 min).
 
 ## Clone + setup (macOS, ~5–15 min)

@@ -28,7 +28,10 @@ def load_output_json(path: Path | str) -> dict:
         # Prefer non-comparison sidecars; take first schema-looking file.
         candidates = [c for c in candidates if "comparison" not in c.name]
         if not candidates:
-            raise FileNotFoundError(f"no JSON outputs in directory: {p}")
+            raise FileNotFoundError(
+                f"no JSON outputs in directory: {p}\n"
+                "Run the pipeline first (e.g. --tier lidar / --tier video)."
+            )
         # Prefer files whose stem matches the folder name (lidar golden).
         preferred = [c for c in candidates if c.stem == p.name or c.stem.startswith(p.name)]
         p = preferred[0] if preferred else candidates[0]

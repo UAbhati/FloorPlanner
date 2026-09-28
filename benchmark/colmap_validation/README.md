@@ -8,7 +8,7 @@ Compare LiDAR golden JSON against photo/video COLMAP output from RGB-only sample
 # Golden
 python run.py --input samples/stray/single_room --tier lidar
 
-# COLMAP on RGB video (default --colmap-frames 100)
+# COLMAP on RGB video (default --colmap-frames 150; long videos auto-raise)
 python run.py --input samples/stray/single_room_rgb --tier video \
   --ref-from out/single_room/
 
@@ -27,11 +27,18 @@ python run.py --compare out/single_room/ out/single_room_rgb/
 Long walls often show ~0% error because COLMAP is scaled to the LiDAR longest
 wall (`--ref-from`). Short-wall / area error is the real signal.
 
-## Baseline notes (2026-09-28)
+## Results (2026-09-28 evening)
 
-| Setup | `single_room` area err | Short-wall err |
-|-------|------------------------|----------------|
-| 16 frames, exhaustive | mapper fail | — |
-| 100 frames, sequential+SIFT | ~8.7% (area PASS) | ~8.7% (wall FAIL vs 5%) |
+Improvements: sequential matcher (auto), soft SfM floor RANSAC, duration-aware
+frame density, flat-cloud wall-band fallback.
 
-See also `docs/STRAY_COLMAP_VALIDATION_PLAN.md`.
+| Sample | Frames | Area err | Short-wall err | Verdict |
+|--------|--------|----------|----------------|---------|
+| `single_room` | 100 | **0.0%** | **0.0%** | **PASS** |
+| `single_scan_floor` | 150 | **6.5%** (area PASS) | 6.5% | FAIL walls (±5%) |
+| `single_scan_with_ceiling` | 250 | 13.9% | 13.9% | FAIL (was: no model) |
+
+## Next
+
+- Push floor short-walls under ±5%; ceiling under ±10% area
+- Optional side-by-side plan plots (Phase 4)

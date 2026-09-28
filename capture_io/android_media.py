@@ -1,6 +1,7 @@
 """Load Android photo folders and extract frames from video for photo/video tiers."""
 from __future__ import annotations
 
+import math
 import subprocess
 from pathlib import Path
 
@@ -35,10 +36,7 @@ def resolve_video(capture_dir: Path) -> Path:
     raise FileNotFoundError(f"no video found under {capture_dir}")
 
 
-def extract_video_frames(video_path: Path, out_dir: Path, max_frames: int = 8) -> list[Path]:
-    """Extract up to max_frames evenly spaced JPEGs via ffmpeg."""
-    out_dir.mkdir(parents=True, exist_ok=True)
-    # Probe duration
+def probe_video_duration_s(video_path: Path) -> float:
     probe = subprocess.run(
         [
             "ffprobe",
@@ -54,9 +52,36 @@ def extract_video_frames(video_path: Path, out_dir: Path, max_frames: int = 8) -
         capture_output=True,
         text=True,
     )
-    duration = float(probe.stdout.strip())
-    # fps so we get ~max_frames over the clip
-    fps = max_frames / max(duration, 1e-3)
+    return float(probe.stdout.strip())
+
+
+def choose_frame_count(duration_s: float, max_frames: int) -> int:
+    """Pick how many frames to extract for COLMAP.
+
+    ``max_frames`` is a soft target. For long walks, raise the count so spacing
+    stays ≤ ~1.5s (sequential matcher needs overlap). Hard cap 300.
+    """
+    if duration_s <= 0:
+        return max(3, max_frames)
+    if duration_s <= 60:
+        return max(3, max_frames)
+    min_for_overlap = int(math.ceil(duration_s / 1.5))
+    return max(3, min(300, max(max_frames, min_for_overlap)))
+
+
+def extract_video_frames(video_path: Path, out_dir: Path, max_frames: int = 8) -> list[Path]:
+    """Extract evenly spaced JPEGs via ffmpeg for COLMAP / damage.
+
+    For long videos, may extract more than ``max_frames`` (see ``choose_frame_count``)
+    so sequential SfM keeps temporal overlap.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for old in list_images(out_dir):
+        old.unlink()
+
+    duration = probe_video_duration_s(video_path)
+    n_frames = choose_frame_count(duration, max_frames)
+    fps = n_frames / max(duration, 1e-3)
     pattern = out_dir / "frame_%04d.jpg"
     subprocess.run(
         [
@@ -67,7 +92,7 @@ def extract_video_frames(video_path: Path, out_dir: Path, max_frames: int = 8) -
             "-vf",
             f"fps={fps}",
             "-frames:v",
-            str(max_frames),
+            str(n_frames),
             str(pattern),
         ],
         check=True,

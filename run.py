@@ -68,7 +68,8 @@ from reconstruction.validation import (  # noqa: E402
 )
 
 # Default frames extracted from video for COLMAP photo/video tiers.
-DEFAULT_COLMAP_FRAMES = 100
+# Long videos auto-raise via choose_frame_count (≤1.5s spacing, cap 300).
+DEFAULT_COLMAP_FRAMES = 150
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -358,8 +359,8 @@ def run_media_tier(
             )
         workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
         try:
-            # Video (and photo-from-video) frames are temporally ordered.
-            matcher = "sequential" if tier == "video" or "photo_from_video" in media_note else "exhaustive"
+            # auto: exhaustive for ≤150 frames (better coverage); sequential for denser sets.
+            matcher = "auto"
             sfm = reconstruct_metric_room(
                 images, workspace, ref_length_m=length, matcher=matcher
             )
@@ -558,8 +559,11 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.compare:
-        golden = load_output_json(Path(args.compare[0]))
-        candidate = load_output_json(Path(args.compare[1]))
+        try:
+            golden = load_output_json(Path(args.compare[0]))
+            candidate = load_output_json(Path(args.compare[1]))
+        except FileNotFoundError as exc:
+            raise SystemExit(str(exc)) from exc
         comparison = compare_output_jsons(golden, candidate)
         out_path = Path(args.out) if args.out else Path("out") / "comparison.json"
         out_path.parent.mkdir(parents=True, exist_ok=True)

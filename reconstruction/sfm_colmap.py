@@ -104,17 +104,23 @@ def run_colmap(
     image_paths: list[Path],
     workspace: Path,
     *,
-    matcher: str = "exhaustive",
+    matcher: str = "auto",
     max_num_features: int = 16384,
-    sequential_overlap: int = 10,
+    sequential_overlap: int = 15,
 ) -> np.ndarray:
     """Run COLMAP and return sparse XYZ points (arbitrary scale).
 
-    ``matcher``: ``exhaustive`` (unordered photo sets) or ``sequential``
-    (ordered video frames — preferred for Stray / phone walkthroughs).
+    ``matcher``:
+      - ``auto``: sequential for ≥40 frames (video); exhaustive for small photo sets
+      - ``exhaustive`` / ``sequential``: force that matcher
     """
-    if matcher not in {"exhaustive", "sequential"}:
-        raise SfMError(f"unknown matcher={matcher!r}; use exhaustive|sequential")
+    if matcher not in {"auto", "exhaustive", "sequential"}:
+        raise SfMError(f"unknown matcher={matcher!r}; use auto|exhaustive|sequential")
+
+    n_images = len(image_paths)
+    resolved = matcher
+    if matcher == "auto":
+        resolved = "sequential" if n_images >= 40 else "exhaustive"
 
     colmap = _ensure_colmap()
     workspace.mkdir(parents=True, exist_ok=True)
@@ -123,23 +129,29 @@ def run_colmap(
     sparse_dir = workspace / "sparse"
     sparse_dir.mkdir(exist_ok=True)
 
-    # Invalidate cache when the input image set or COLMAP settings change.
     manifest = workspace / "image_manifest.txt"
     fingerprint = (
-        f"matcher={matcher};features={max_num_features};overlap={sequential_overlap}\n"
+        f"matcher={resolved};features={max_num_features};overlap={sequential_overlap};v=3\n"
         + "\n".join(f"{p.name}:{p.stat().st_size}" for p in sorted(image_paths, key=lambda x: x.name))
     )
-    existing = sparse_dir / "0" / "points3D.txt"
-    if existing.is_file() and manifest.is_file() and manifest.read_text() == fingerprint:
-        try:
-            return _parse_points3d_txt(existing)
-        except SfMError:
-            pass
-    else:
-        # Stale workspace from a previous capture — clear sparse model.
-        if sparse_dir.exists():
-            shutil.rmtree(sparse_dir)
-        sparse_dir.mkdir(exist_ok=True)
+    # Cache: pick largest model under sparse/ if fingerprint matches.
+    if manifest.is_file() and manifest.read_text() == fingerprint and sparse_dir.exists():
+        best_cached = None
+        for cand in sparse_dir.iterdir():
+            txt = cand / "points3D.txt"
+            if cand.is_dir() and txt.is_file():
+                try:
+                    pts = _parse_points3d_txt(txt)
+                    if best_cached is None or len(pts) > len(best_cached):
+                        best_cached = pts
+                except SfMError:
+                    pass
+        if best_cached is not None:
+            return best_cached
+
+    if sparse_dir.exists():
+        shutil.rmtree(sparse_dir)
+    sparse_dir.mkdir(exist_ok=True)
 
     _stage_images(image_paths, image_dir)
     manifest.write_text(fingerprint)
@@ -165,9 +177,11 @@ def run_colmap(
             "1",
             "--SiftExtraction.domain_size_pooling",
             "1",
+            "--SiftExtraction.first_octave",
+            "-1",
         ]
     )
-    if matcher == "sequential":
+    if resolved == "sequential":
         _run(
             [
                 colmap,
@@ -178,6 +192,8 @@ def run_colmap(
                 "0",
                 "--SequentialMatching.overlap",
                 str(sequential_overlap),
+                "--SequentialMatching.quadratic_overlap",
+                "1",
             ]
         )
     else:
@@ -191,6 +207,7 @@ def run_colmap(
                 "0",
             ]
         )
+
     _run(
         [
             colmap,
@@ -201,29 +218,28 @@ def run_colmap(
             str(image_dir),
             "--output_path",
             str(sparse_dir),
-            # Indoor handheld video often has weak parallax — relax init gates.
             "--Mapper.init_min_num_inliers",
-            "50",
+            "40",
             "--Mapper.init_min_tri_angle",
-            "4",
+            "3",
             "--Mapper.abs_pose_min_num_inliers",
-            "15",
+            "12",
             "--Mapper.abs_pose_min_inlier_ratio",
-            "0.15",
+            "0.12",
             "--Mapper.min_num_matches",
-            "15",
+            "12",
+            "--Mapper.init_num_trials",
+            "300",
         ],
         allow_fail=True,
     )
 
-    candidates = []
-    model_0 = sparse_dir / "0"
-    if model_0.is_dir():
-        candidates.append(model_0)
-    candidates.extend(sorted(p for p in sparse_dir.iterdir() if p.is_dir() and p.name != "0"))
+    candidates = [p for p in sparse_dir.iterdir() if p.is_dir()]
     if not candidates:
         raise SfMError(f"COLMAP mapper produced no models under {sparse_dir}")
 
+    best_pts: np.ndarray | None = None
+    best_n = -1
     last_err: Exception | None = None
     for cand in candidates:
         try:
@@ -239,11 +255,17 @@ def run_colmap(
                     "TXT",
                 ]
             )
-            return _parse_points3d_txt(cand / "points3D.txt")
+            pts = _parse_points3d_txt(cand / "points3D.txt")
+            if len(pts) > best_n:
+                best_n = len(pts)
+                best_pts = pts
         except (SfMError, FileNotFoundError) as exc:
             last_err = exc
             continue
-    raise SfMError(f"no usable COLMAP model under {sparse_dir}: {last_err}")
+
+    if best_pts is None:
+        raise SfMError(f"no usable COLMAP model under {sparse_dir}: {last_err}")
+    return best_pts
 
 
 def _pca_up_axis(points: np.ndarray) -> np.ndarray:
@@ -252,14 +274,79 @@ def _pca_up_axis(points: np.ndarray) -> np.ndarray:
     cov = centered.T @ centered / max(len(points) - 1, 1)
     vals, vecs = np.linalg.eigh(cov)
     up = vecs[:, 0]  # smallest eigenvalue
-    # Orient so more points lie above the median plane.
-    if np.median(points @ up) < np.mean(points @ up):
-        # Prefer the direction where the upper half has more extent? Use: majority above median.
-        pass
     heights = points @ up
     if np.sum(heights > np.median(heights)) < len(points) / 2:
         up = -up
     return up / np.linalg.norm(up)
+
+
+def _fit_sparse_up_and_band(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, float | None, str, list[str]]:
+    """Up-axis + wall band for sparse SfM clouds (softer than LiDAR plane gates).
+
+    Tries RANSAC floor with a low inlier floor, then PCA percentile band.
+    Returns (up, wall_band, ceiling_height_unscaled, ceiling_source, notes).
+    """
+    import open3d as o3d
+
+    notes: list[str] = []
+    min_inliers = max(80, len(points) // 15)
+    dist_thresh = 0.03  # slightly looser than LiDAR 2cm — SfM noise
+
+    o3d.utility.random.seed(42)
+    pcd = o3d.geometry.PointCloud()
+    pcd.points = o3d.utility.Vector3dVector(points)
+    try:
+        plane_model, inlier_idx = pcd.segment_plane(
+            distance_threshold=dist_thresh, ransac_n=3, num_iterations=2000
+        )
+    except Exception as exc:  # noqa: BLE001
+        notes.append(f"ransac_failed={exc}")
+        inlier_idx = []
+        plane_model = None
+
+    if plane_model is not None and len(inlier_idx) >= min_inliers:
+        a, b, c, d = plane_model
+        normal = np.array([a, b, c], dtype=float)
+        normal = normal / np.linalg.norm(normal)
+        offset = -d / np.linalg.norm([a, b, c])
+        heights = points @ normal
+        above = np.sum(heights > offset)
+        below = np.sum(heights < offset)
+        up = normal if above >= below else -normal
+        floor_off = float(np.dot(normal, up) * offset)
+        h = points @ up
+        ceil_off = float(np.percentile(h[h > floor_off], 95)) if np.any(h > floor_off) else float(np.percentile(h, 95))
+        ceiling_h = abs(ceil_off - floor_off)
+        notes.append(f"sparse_floor_inliers={len(inlier_idx)}")
+        if ceiling_h < 0.25:
+            # Degenerate vertical extent (flat SfM patch) — use all points in 2D.
+            notes.append(f"flat_cloud_h={ceiling_h:.3f};use_all_points")
+            return up, points, None, "none", notes
+        lo = floor_off + 0.10 * ceiling_h
+        hi = floor_off + 0.90 * ceiling_h
+        wall_band = points[(h >= lo) & (h <= hi)]
+        if len(wall_band) < 30:
+            # Widen band if mid-slice is empty.
+            wall_band = points[(h >= floor_off) & (h <= ceil_off)]
+            notes.append("widened_wall_band")
+        return up, wall_band, ceiling_h, "rough", notes
+
+    notes.append(
+        f"sparse_floor_weak={len(inlier_idx) if plane_model is not None else 0}"
+        f"<{min_inliers};pca_up"
+    )
+    up = _pca_up_axis(points)
+    heights = points @ up
+    floor_off = float(np.percentile(heights, 10))
+    ceil_off = float(np.percentile(heights, 90))
+    ceiling_h = abs(ceil_off - floor_off)
+    if ceiling_h < 0.25:
+        notes.append(f"flat_pca_h={ceiling_h:.3f};use_all_points")
+        return up, points, None, "none", notes
+    lo = floor_off + 0.10 * (ceil_off - floor_off)
+    hi = ceil_off - 0.10 * (ceil_off - floor_off)
+    wall_band = points[(heights >= lo) & (heights <= hi)]
+    return up, wall_band, ceiling_h, "rough", notes
 
 
 def reconstruct_metric_room(
@@ -267,7 +354,7 @@ def reconstruct_metric_room(
     workspace: Path,
     ref_length_m: float,
     *,
-    matcher: str = "exhaustive",
+    matcher: str = "auto",
     max_num_features: int = 16384,
 ) -> SfMResult:
     """SfM → floor/ceiling → room polygon, scaled so longest wall = ref_length_m."""
@@ -300,7 +387,8 @@ def reconstruct_metric_room(
     wall_band: np.ndarray
 
     used_plane = False
-    if len(points) >= 500:
+    if len(points) >= 2000:
+        # Dense enough to try the LiDAR-grade floor/ceiling fitter.
         try:
             fc = find_floor_and_ceiling(points)
             up = fc.up_normal
@@ -310,23 +398,13 @@ def reconstruct_metric_room(
             wall_band = extract_wall_band(points, up, floor_off, ceil_off)
             used_plane = True
         except ValueError as exc:
-            # Sparse SfM clouds often clear the 500-pt gate but lack a dominant
-            # RANSAC floor (MIN_PLANE_INLIERS=500). Fall back to PCA percentiles.
             notes.append(f"plane_fit_failed={exc}")
 
     if not used_plane:
-        notes.append("sparse_pca_up")
-        up = _pca_up_axis(points)
-        heights = points @ up
-        floor_off = float(np.percentile(heights, 10))
-        ceil_off = float(np.percentile(heights, 90))
-        ceiling_height_m = abs(ceil_off - floor_off)
-        ceiling_source = "rough"
-        lo = floor_off + 0.05 * (ceil_off - floor_off)
-        hi = ceil_off - 0.05 * (ceil_off - floor_off)
-        wall_band = points[(heights >= lo) & (heights <= hi)]
+        up, wall_band, ceiling_height_m, ceiling_source, soft_notes = _fit_sparse_up_and_band(points)
+        notes.extend(soft_notes)
 
-    if len(wall_band) < 50:
+    if len(wall_band) < 25:
         raise SfMError(f"wall band too thin ({len(wall_band)} points)")
 
     pts2d = project_to_horizontal(wall_band, up)

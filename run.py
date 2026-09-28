@@ -2,19 +2,19 @@
 """One-command entrypoint: capture directory -> JSON (schema/output.schema.json) + rendered plan.
 
 Usage:
-    python run.py --input samples/stray/single_room --tier lidar
-    python run.py --input samples/stray/single_room_rgb --tier video
-    python run.py --input samples/local/my_room --tier photo --ref-length-m 4.82
+    python run.py --input <capture_folder> --tier lidar
+    python run.py --input <capture_folder> --tier photo --ref-length-m <long_wall_m>
+    python run.py --input <capture_folder> --tier video --ref-from <lidar_out_dir/>
+    python run.py --compare <out_a/> <out_b/>
 
-    # LiDAR golden vs video COLMAP:
-    python run.py --input samples/stray/single_room --tier lidar
-    python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/single_room/
-    python run.py --compare out/single_room/ out/single_room_rgb/
+``--input`` is any folder (relative or absolute). Layout by tier:
+  lidar  — odometry.csv + depth/ (+ confidence/, rgb.mp4)
+  photo  — photos/ or loose stills
+  video  — video.mp4 / rgb.mp4 / *.mp4
 
-Each samples/ folder is a capture unit (video and/or photos and/or LiDAR).
-``--tier`` selects the modality. Default output: ``out/<folder_name>/``.
-Photo/video need metric scale via ``--ref-length-m``, ``--ref-from`` (LiDAR JSON),
-or benchmark/ground_truth.csv. Use ``--no-colmap`` only for GT-rectangle ablations.
+Default output: ``out/<folder_name>/``. Photo/video need metric scale via
+``--ref-length-m``, ``--ref-from`` (LiDAR JSON), or benchmark/ground_truth.csv.
+Use ``--no-colmap`` only for GT-rectangle ablations.
 """
 from __future__ import annotations
 

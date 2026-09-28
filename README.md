@@ -3,7 +3,7 @@
 Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON + top-down plan.
 
 **Capture (non-engineer):** follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally — install the App Store tools, walk the room, hand over the export folder.
-**Pipeline (this README):** clone → setup → one command per capture on a clean macOS machine (<15 min).
+**Pipeline (this README):** clone → setup → point `--input` at any capture folder.
 
 ## Clone + setup (macOS, ~5–15 min)
 
@@ -22,14 +22,80 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-Confirm the CLI:
-
 ```bash
 source .venv/bin/activate
 python run.py --help
 ```
 
-## Samples: what you get vs what you drop in
+## Capture folder layout
+
+`--input` is any folder (relative or absolute). Tier selects which files are used.
+You do **not** need this repo’s `samples/` tree — only the files below.
+
+| Tier | Put in the folder | Example |
+|------|-------------------|---------|
+| `lidar` | Stray export: `odometry.csv` + `depth/` (+ `confidence/`, `rgb.mp4`) | unzipped Stray share |
+| `photo` | `photos/*.jpg` **or** loose stills in the folder root | 2–8 overlapping phone shots |
+| `video` | one of `video.mp4`, `rgb.mp4`, or any `*.mp4` / `*.mov` | phone walk or Stray RGB |
+
+```
+<capture_folder>/                 # --input path (relative or absolute)
+  # LiDAR (Stray) — need all of these for --tier lidar
+  odometry.csv
+  depth/                          # depth frames
+  confidence/                     # optional but usual
+  rgb.mp4                         # optional for LiDAR; required if you also run video
+
+  # Phone photo — either layout works for --tier photo
+  photos/*.jpg
+  # …or stills directly in <capture_folder>/
+
+  # Phone / RGB video — for --tier video (or photo if no stills)
+  video.mp4                       # or rgb.mp4 / other *.mp4
+```
+
+Default output: `out/<folder_name>/` (override with `--out`).
+
+## Run (general)
+
+```bash
+source .venv/bin/activate
+
+# LiDAR
+python run.py --input <capture_folder> --tier lidar
+
+# Photo (needs metric scale: tape long wall, or --ref-from a LiDAR run)
+python run.py --input <capture_folder> --tier photo --ref-length-m <long_wall_m>
+
+# Video / COLMAP (same scale options)
+python run.py --input <capture_folder> --tier video --ref-length-m <long_wall_m>
+
+# Scale photo/video from a prior LiDAR JSON (or its out/ dir)
+python run.py --input <rgb_or_phone_folder> --tier video --ref-from <lidar_out_dir_or_json>
+
+# Compare two outputs (e.g. LiDAR golden vs COLMAP)
+python run.py --compare <out_a/> <out_b/>
+```
+
+Optional: `--colmap-frames 100` (default; long videos auto-raise), `--out <dir>`.
+
+### Walk-in examples
+
+```bash
+# Unzipped Stray export anywhere
+python run.py --input ./stray_export --tier lidar
+
+# RGB-only COLMAP scaled from that LiDAR run
+python run.py --input ./stray_export --tier video --ref-from out/stray_export/
+
+# Phone stills with a taped long wall
+mkdir -p ./anyroom/photos   # drop 2–8 stills into photos/
+python run.py --input ./anyroom --tier photo --ref-length-m 3.5
+```
+
+Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).
+
+## What’s in git vs what you drop in
 
 Raw capture media is **not** in this repo (size + privacy). Committed artifacts
 still let you verify every reported number.
@@ -37,12 +103,14 @@ still let you verify every reported number.
 | What | In git? | Action |
 |------|---------|--------|
 | Benchmark JSON, plan PNGs, REPORT, H2H, fix-loop before/after | Yes | Browse / open — no download needed |
-| 3 company Stray LiDAR exports | No (yours already) | Drop into `samples/stray/` — see below |
-| Author phone rooms (`my_room`, `my_bedroom`, …) | No (privacy) | Not available; use committed results under `benchmark/` |
+| Company Stray LiDAR exports | No (testers already have them) | Put each export in any folder; or under `samples/stray/<name>/` |
+| Author phone rooms (`my_room`, …) | No (privacy) | Use committed results under `benchmark/` |
 
-Full layout + “how to add a new capture”: **[samples/README.md](samples/README.md)**
+More detail: **[samples/README.md](samples/README.md)**
 
-### Drop Stray exports (tester — no renaming)
+### Optional: company Stray drop-in names
+
+If you use the shared tester names:
 
 ```
 samples/stray/single_room/
@@ -50,58 +118,29 @@ samples/stray/single_scan_floor/
 samples/stray/single_scan_with_ceiling/
 ```
 
-Link RGB-only siblings for COLMAP video/photo tests:
-
 ```bash
-for s in single_room single_scan_floor single_scan_with_ceiling; do
-  mkdir -p "samples/stray/${s}_rgb"
-  ln -sfn "../$s/rgb.mp4" "samples/stray/${s}_rgb/rgb.mp4"
-done
-```
-
-```bash
-source .venv/bin/activate
-# LiDAR golden → out/single_room/
 python run.py --input samples/stray/single_room --tier lidar
-# COLMAP video → out/single_room_rgb/
+# RGB-only sibling (copy or symlink rgb.mp4 into a second folder):
+mkdir -p samples/stray/single_room_rgb
+ln -sfn ../single_room/rgb.mp4 samples/stray/single_room_rgb/rgb.mp4
 python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/single_room/
 python run.py --compare out/single_room/ out/single_room_rgb/
 ```
 
-### Or browse committed outputs (zero media)
+### Browse committed outputs (zero media)
 
 - [`fix_loop/before/`](fix_loop/before/) vs [`fix_loop/after/`](fix_loop/after/) — wall-fix regenerable pair
 - [`benchmark/h2h/`](benchmark/h2h/) — photo/video + stitch ablation JSON/PNG
 - [`benchmark/REPORT.md`](benchmark/REPORT.md) · [`benchmark/HEAD_TO_HEAD.md`](benchmark/HEAD_TO_HEAD.md)
 - [`benchmark/damage/`](benchmark/damage/) — staged two-class damage output
 
-### Test any new room (phone)
+## Multi-room stitch (GT rectangles)
+
+Uses committed `benchmark/ground_truth.csv` (no raw media required):
 
 ```bash
-mkdir -p /tmp/anyroom/photos   # drop 2–8 stills
-python run.py --input /tmp/anyroom --tier photo --ref-length-m <long_wall_m>
-```
-
-## Walk-in (cold CLI)
-
-Unzipped Stray folder anywhere on disk (`odometry.csv` + `depth/` + `rgb.mp4`):
-
-```bash
-source .venv/bin/activate
-python run.py --input /path/to/stray_export --tier lidar
-# RGB-only COLMAP (folder with just rgb.mp4, or samples/stray/*_rgb):
-python run.py --input /path/to/stray_rgb --tier video --ref-from out/<lidar_folder>/
-```
-
-Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).
-
-## Multi-room stitch (GT rectangles; needs author `samples/local/` or just browse committed stitch JSON)
-
-```bash
-# Hub + satellites (3+ rooms). Default hub = largest floor area.
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
   --hub my_room --drift-align on --out out/stitch
-# Ablation (opening centers not aligned)
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
   --drift-align off --out out/stitch
 ```
@@ -109,7 +148,7 @@ python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
 Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 
 ## Docs
-- [samples/README.md](samples/README.md) — **drop zones, privacy, how to add a capture**
+- [samples/README.md](samples/README.md) — capture layout, privacy, adding a room
 - [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) — ≤6-page technical report
 - [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix (follow at walk-in)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
@@ -123,4 +162,4 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 - Photo/video: COLMAP SfM (default 100 frames; long walks auto-raise to ≤1.0s spacing). Fails honestly if reconstruction is thin — no silent GT-rectangle substitute (`--no-colmap` is ablation-only). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
 - Stray RGB vs LiDAR golden (scaled): short-wall within ±5% on single_room / floor / ceiling with current sparse fit (PCA-up + polar aspect pick).
 - Multi-room stitch: GT hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
-- Author `samples/local/my_*` media is private; Stray media you already have — drop under `samples/stray/`.
+- Author `samples/local/my_*` media is private; drop your own captures in any folder and pass `--input`.

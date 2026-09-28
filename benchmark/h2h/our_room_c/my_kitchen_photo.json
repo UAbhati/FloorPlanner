@@ -1,8 +1,8 @@
 {
   "capture_id": "my_kitchen",
   "tier": "photo",
-  "device": "Android/iPhone handheld (native camera)",
-  "generated_at": "2026-09-28T12:03:30.045190+00:00",
+  "device": "Android/iPhone handheld (native camera / RGB video)",
+  "generated_at": "2026-09-28T14:55:37.134932+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -106,7 +106,7 @@
             "ci_high_m": 0.85,
             "confidence_level": 0.95
           },
-          "position_on_wall_m": 0.0
+          "position_on_wall_m": 1.48
         }
       ],
       "ceiling_height": {

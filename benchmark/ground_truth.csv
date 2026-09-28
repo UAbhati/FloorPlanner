@@ -7,8 +7,8 @@ my_room,wall_length,east,2.42,assumed_equal_to_west; rectangle
 my_room,floor_length,,4.82,north_south_axis
 my_room,floor_width,,2.42,east_west_axis
 my_room,floor_area_m2,,11.6644,product_of_length_x_width
-my_room,opening_width,south,0.88,door_with_frame; tape_cm=88; from_left_m=UNKNOWN
-my_room,opening_width,south,0.77,passage_no_frame; tape_cm=77; from_left_m=UNKNOWN
+my_room,opening_width,south,0.88,door_with_frame; to_bedroom; tape_cm=88; from_left_m=1.55
+my_room,opening_width,south,0.77,passage_no_frame; to_kitchen_side_by_side; tape_cm=77; from_left_m=2.57
 my_room,opening_width,north,0.90,CLOSED_door_exclude_from_opening_gate; height_m=2.11; door_was_closed_in_capture
 my_room,opening_width,west,0.77,EXCLUDE_window_not_in_magicplan; door_to_kitchen_for_3room_stitch_only; tape_cm=77
 my_bedroom,wall_length,west,1.95,tape_cm=195
@@ -18,7 +18,7 @@ my_bedroom,wall_length,north,2.43,assumed_equal_to_south; has_door_to_hall
 my_bedroom,floor_length,,2.43,
 my_bedroom,floor_width,,1.95,
 my_bedroom,floor_area_m2,,4.7385,product_of_length_x_width
-my_bedroom,opening_width,north,0.88,door_to_hall; tape_or_magicplan_cm=88; at_west_edge_adjacent_to_kitchen; from_right_m=1.55
+my_bedroom,opening_width,north,0.88,door_to_hall; tape_or_magicplan_cm=88; at_east_edge_adjacent_to_kitchen; from_right_m=0.0
 my_bedroom,ceiling_height,,2.58,corrected_2026-09-27_same_slab_as_my_room_and_my_kitchen; previously_defaulted_to_residential_prior_not_measured
 my_kitchen,wall_length,north,2.25,magicplan_app_export_cm=225; long_wall
 my_kitchen,wall_length,south,2.25,assumed_equal_to_north; rectangle
@@ -28,4 +28,4 @@ my_kitchen,floor_length,,2.25,
 my_kitchen,floor_width,,1.66,
 my_kitchen,floor_area_m2,,3.735,product_of_length_x_width; magicplan_app_reported=3.74
 my_kitchen,ceiling_height,,2.58,same_slab_as_my_room_and_my_bedroom_per_owner
-my_kitchen,opening_width,north,0.77,door_to_hall; magicplan_app_export_cm=77; at_east_edge_adjacent_to_bedroom; from_right_m=0.0
+my_kitchen,opening_width,north,0.77,door_to_hall; magicplan_app_export_cm=77; at_west_edge_adjacent_to_bedroom; from_right_m=1.48

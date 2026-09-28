@@ -1,8 +1,8 @@
 {
   "capture_id": "my_kitchen",
   "tier": "video",
-  "device": "Android/iPhone handheld (native camera)",
-  "generated_at": "2026-09-28T12:03:31.076187+00:00",
+  "device": "Android/iPhone handheld (native camera / RGB video)",
+  "generated_at": "2026-09-28T14:55:38.266544+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -106,7 +106,7 @@
             "ci_high_m": 0.85,
             "confidence_level": 0.95
           },
-          "position_on_wall_m": 0.0
+          "position_on_wall_m": 1.48
         }
       ],
       "ceiling_height": {
@@ -123,36 +123,17 @@
       },
       "damage_regions": [
         {
-          "id": "damage_stain_0_9",
+          "id": "damage_stain_0_1",
           "surface_id": "wall_0",
           "class": "water_stain",
           "extent_m2": {
-            "value_m": 0.07910747643762263,
-            "ci_low_m": 0.029107476437622626,
-            "ci_high_m": 0.12910747643762263,
+            "value_m": 2.232245283995464,
+            "ci_low_m": 1.116122641997732,
+            "ci_high_m": 3.3483679259931955,
             "confidence_level": 0.95
           },
           "concealed_flag": false,
           "concealed_rule": null
-        },
-        {
-          "id": "damage_crack_1_6",
-          "surface_id": "wall_1",
-          "class": "surface_crack",
-          "extent_m2": {
-            "value_m": 0.023291815867608374,
-            "ci_low_m": 0.003291815867608374,
-            "ci_high_m": 0.04329181586760837,
-            "confidence_level": 0.95
-          },
-          "concealed_flag": false,
-          "concealed_rule": null,
-          "length_m": {
-            "value_m": 0.34490238611713664,
-            "ci_low_m": 0.20694143167028198,
-            "ci_high_m": 0.4828633405639913,
-            "confidence_level": 0.95
-          }
         },
         {
           "id": "damage_concealed_wall_2_opening_0",
@@ -170,20 +151,12 @@
       ],
       "scope_line_items": [
         {
-          "id": "scope_damage_stain_0_9",
+          "id": "scope_damage_stain_0_1",
           "surface_id": "wall_0",
-          "damage_region_id": "damage_stain_0_9",
+          "damage_region_id": "damage_stain_0_1",
           "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
-          "quantity": 0.079,
+          "quantity": 2.232,
           "unit": "m2"
-        },
-        {
-          "id": "scope_damage_crack_1_6",
-          "surface_id": "wall_1",
-          "damage_region_id": "damage_crack_1_6",
-          "description": "Inspect elongated surface mark / crack (rule: crack_elongated_mark)",
-          "quantity": 0.345,
-          "unit": "m"
         },
         {
           "id": "scope_damage_concealed_wall_2_opening_0",
@@ -211,6 +184,6 @@
   },
   "drift_correction": {
     "method_used": "none",
-    "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
+    "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=100. Wall CIs use tier calibration (\u00b13%)."
   }
 }

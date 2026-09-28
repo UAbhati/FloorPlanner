@@ -2,13 +2,19 @@
 """One-command entrypoint: capture directory -> JSON (schema/output.schema.json) + rendered plan.
 
 Usage:
-    python run.py --input samples/stray/single_scan_with_ceiling --tier lidar --out out/
-    python run.py --input samples/local/my_room --tier photo --out out/
-    # Short names also resolve under samples/stray/ or samples/local/:
-    python run.py --input samples/single_room --tier lidar --out out/
+    python run.py --input samples/stray/single_room --tier lidar
+    python run.py --input samples/stray/single_room_rgb --tier video
+    python run.py --input samples/local/my_room --tier photo --ref-length-m 4.82
 
-Photo/video need metric scale: pass --ref-length-m/--ref-width-m, or rely on
-benchmark/ground_truth.csv for a matching room_id (folder name).
+    # LiDAR golden vs video COLMAP:
+    python run.py --input samples/stray/single_room --tier lidar
+    python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/single_room/
+    python run.py --compare out/single_room/ out/single_room_rgb/
+
+Each samples/ folder is a capture unit (video and/or photos and/or LiDAR).
+``--tier`` selects the modality. Default output: ``out/<folder_name>/``.
+Photo/video need metric scale via ``--ref-length-m``, ``--ref-from`` (LiDAR JSON),
+or benchmark/ground_truth.csv. Use ``--no-colmap`` only for GT-rectangle ablations.
 """
 from __future__ import annotations
 
@@ -55,6 +61,14 @@ from reconstruction.stitch import (  # noqa: E402
     stitch_from_gt,
     stitch_three_rooms_property,
 )
+from reconstruction.validation import (  # noqa: E402
+    compare_output_jsons,
+    extract_scale_from_lidar_json,
+    load_output_json,
+)
+
+# Default frames extracted from video for COLMAP photo/video tiers.
+DEFAULT_COLMAP_FRAMES = 100
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -215,6 +229,82 @@ def _is_stray_capture(capture_dir: Path) -> bool:
     return (capture_dir / "odometry.csv").is_file() and (capture_dir / "depth").is_dir()
 
 
+def _colmap_failure_message(
+    exc: BaseException,
+    *,
+    images: list[Path],
+    capture_dir: Path,
+    tier: str,
+) -> str:
+    """Actionable error when photo/video SfM cannot reconstruct."""
+    n = len(images)
+    if tier == "photo":
+        hint = (
+            "  • PHOTOS: Capture at least 25-30 photos from different angles\n"
+            "           covering all walls, floor, and ceiling\n"
+        )
+    else:
+        hint = (
+            "  • VIDEO:  Record 30-60 second continuous video walking around\n"
+            "           the room, pointing camera at walls/corners\n"
+            "           (use --colmap-frames N to extract more frames)\n"
+        )
+    return (
+        f"COLMAP reconstruction failed: {exc}\n\n"
+        "Photo/video tier requires sufficient image coverage for Structure-from-Motion.\n\n"
+        "To fix this:\n"
+        f"{hint}\n"
+        "For best results:\n"
+        "  - Ensure good lighting (avoid dark rooms)\n"
+        "  - Move slowly and steadily\n"
+        "  - Overlap between views (each wall from 2-3 angles)\n"
+        "  - Include distinctive features (furniture, wall decorations)\n\n"
+        "If you have a LiDAR-capable device, use --tier lidar instead.\n"
+        f"Current input: {n} images from {capture_dir}"
+    )
+
+
+def _resolve_ref_length(
+    capture_dir: Path,
+    ref_length_m: float | None,
+    ref_from: Path | None,
+) -> tuple[float | None, str | None]:
+    """Resolve metric scale reference for COLMAP. Returns (length, source_note)."""
+    if ref_length_m is not None:
+        return ref_length_m, "cli_length"
+    if ref_from is not None:
+        golden = load_output_json(ref_from)
+        return extract_scale_from_lidar_json(golden), f"ref_from={ref_from}"
+    gt = load_ground_truth(GT_PATH, capture_dir.name)
+    if gt and gt.length_m is not None:
+        return gt.length_m, "gt_length"
+    return None, None
+
+
+def _collect_tier_images(
+    capture_dir: Path,
+    out_dir: Path,
+    tier: str,
+    colmap_frames: int,
+) -> tuple[list[Path], str]:
+    """Load photos or extract video frames for photo/video COLMAP."""
+    if tier == "photo":
+        try:
+            photo_dir = resolve_photo_dir(capture_dir)
+            images = list_images(photo_dir)
+            return images, f"photo_count={len(images)} dir={photo_dir.name}"
+        except FileNotFoundError:
+            # RGB-only folders: treat evenly spaced video frames as a photo set.
+            video = resolve_video(capture_dir)
+            frame_dir = out_dir / f"{capture_dir.name}_photo_frames"
+            images = extract_video_frames(video, frame_dir, max_frames=colmap_frames)
+            return images, f"photo_from_video={video.name} extracted_frames={len(images)}"
+    video = resolve_video(capture_dir)
+    frame_dir = out_dir / f"{capture_dir.name}_video_frames"
+    images = extract_video_frames(video, frame_dir, max_frames=colmap_frames)
+    return images, f"video={video.name} extracted_frames={len(images)}"
+
+
 def run_media_tier(
     capture_dir: Path,
     out_dir: Path,
@@ -223,122 +313,56 @@ def run_media_tier(
     ref_width_m: float | None,
     *,
     use_colmap: bool = True,
+    colmap_frames: int = DEFAULT_COLMAP_FRAMES,
+    ref_from: Path | None = None,
 ) -> dict:
-    """Photo/video tier.
+    """Photo/video tier via COLMAP (or explicit ``--no-colmap`` GT rectangle).
 
-    Priority:
-    1. Stray Scanner folder → same metric reconstruction as LiDAR, wider tier CIs
-       (walk-in / provided samples work without my_room GT).
-    2. COLMAP SfM scaled by --ref-length-m (or GT length) when dense enough.
-    3. Axis-aligned rectangle from --ref-length-m/--ref-width-m or GT.
+    LiDAR depth is never used here — even if the folder is a full Stray export.
+    For LiDAR, use ``--tier lidar``. For COLMAP tests on Stray RGB, use the
+    ``*_rgb`` sample folders (video only) and compare against LiDAR golden JSON.
     """
-    # --- Path A: Stray export (provided samples + LiDAR walk-in handoff) ---
-    if _is_stray_capture(capture_dir):
-        output = run_lidar_tier(capture_dir, out_dir, wall_method="auto")
-        output["tier"] = tier
-        output["device"] = (
-            "iPhone Pro-class (Stray Scanner export; "
-            f"{tier} tier uses depth+poses with widened CIs)"
-        )
-        # Re-emit room measurements with photo/video CI widths.
-        room0 = output["rooms"][0]
-        # Rebuild CIs by re-wrapping lengths (values unchanged).
-        wall_frac = TIER_WALL_FRAC[tier]
-        for wall in room0["walls"]:
-            v = wall["length"]["value_m"]
-            m = max(0.05, v * wall_frac)
-            wall["length"] = measurement(v, v - m, v + m)
-        area = room0["floor_area"]["value_m"]
-        am = max(0.5, area * TIER_AREA_FRAC[tier])
-        room0["floor_area"] = measurement(area, area - am, area + am)
-        ch = room0["ceiling_height"]["value_m"]
-        if ch > 0:
-            cm = max(0.05, ch * wall_frac)
-            room0["ceiling_height"] = measurement(ch, ch - cm, ch + cm)
-        output["drift_correction"]["notes"] = (
-            f"method=stray_metric_cloud; tier={tier}; "
-            + output["drift_correction"]["notes"]
-            + f" Wall CIs widened to ±{int(wall_frac*100)}% for this tier."
-        )
-        # Damage from RGB video frames if present.
-        try:
-            video = resolve_video(capture_dir)
-            frame_dir = out_dir / f"{capture_dir.name}_{tier}_rgb_frames"
-            images = extract_video_frames(video, frame_dir, max_frames=8)
-            # Rebuild a minimal RoomPolygon-like for damage helper via walls already in JSON — skip;
-            # attach empty damage if we can't rebuild. Prefer running damage on frames with stub room.
-            from reconstruction.room_polygon import RoomPolygon, Wall
-            import numpy as np
-
-            walls = []
-            for w in room0["walls"]:
-                walls.append(
-                    Wall(
-                        id=w["id"],
-                        start=np.array(w["start"], dtype=float),
-                        end=np.array(w["end"], dtype=float),
-                        length_m=w["length"]["value_m"],
-                    )
-                )
-            poly = np.array(room0["polygon"], dtype=float)
-            room_obj = RoomPolygon(
-                vertices_2d=poly,
-                walls=walls,
-                openings=[],
-                floor_area_m2=area,
-                method="stray_metric_cloud",
-                low_confidence=False,
-            )
-            damage, scope = detect_damage_from_photos(images, room_obj)
-            room0["damage_regions"] = damage
-            room0["scope_line_items"] = scope
-        except Exception as exc:  # noqa: BLE001
-            output["drift_correction"]["notes"] += f" damage_rgb_skip={exc}"
-        # Rewrite plan path label
-        plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
-        # Keep lidar plan; also copy name for tier clarity if exists
-        lidar_plan = Path(output["stitched_plan"]["rendered_plan_path"])
-        if lidar_plan.is_file():
-            import shutil
-
-            shutil.copy2(lidar_plan, plan_path)
-            output["stitched_plan"]["rendered_plan_path"] = str(plan_path)
-        return output
-
-    # --- Path B/C: plain phone photos or video ---
-    if tier == "photo":
-        photo_dir = resolve_photo_dir(capture_dir)
-        images = list_images(photo_dir)
-        media_note = f"photo_count={len(images)} dir={photo_dir.name}"
-    else:
-        video = resolve_video(capture_dir)
-        frame_dir = out_dir / f"{capture_dir.name}_video_frames"
-        images = extract_video_frames(video, frame_dir, max_frames=16)
-        media_note = f"video={video.name} extracted_frames={len(images)}"
+    images, media_note = _collect_tier_images(capture_dir, out_dir, tier, colmap_frames)
 
     gt = load_ground_truth(GT_PATH, capture_dir.name)
-    length = ref_length_m if ref_length_m is not None else (gt.length_m if gt else None)
+    length, length_src = _resolve_ref_length(capture_dir, ref_length_m, ref_from)
     width = ref_width_m if ref_width_m is not None else (gt.width_m if gt else None)
     ceiling_m = gt.ceiling_height_m if gt else None
     openings = gt.openings if gt else []
-    scale_src_parts = []
-    if ref_length_m is not None:
-        scale_src_parts.append("cli_length")
-    elif gt and gt.length_m is not None:
-        scale_src_parts.append("gt_length")
+    scale_src_parts: list[str] = []
+    if length_src:
+        scale_src_parts.append(length_src)
     if ref_width_m is not None:
         scale_src_parts.append("cli_width")
     elif gt and gt.width_m is not None:
         scale_src_parts.append("gt_width")
 
-    sfm_notes = ""
     room: RoomPolygon | None = None
     ceiling = None
 
-    if use_colmap and length is not None:
+    if use_colmap:
+        if length is None:
+            raise SystemExit(
+                "photo/video COLMAP needs one reference length for metric scale.\n"
+                "Pass --ref-length-m, --ref-from <lidar_json_or_dir>, or a matching "
+                f"row in benchmark/ground_truth.csv.\ncapture_dir={capture_dir}"
+            )
+        if len(images) < 3:
+            raise SystemExit(
+                _colmap_failure_message(
+                    SfMError(f"need >= 3 images for SfM, got {len(images)}"),
+                    images=images,
+                    capture_dir=capture_dir,
+                    tier=tier,
+                )
+            )
         workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
         try:
-            sfm = reconstruct_metric_room(images, workspace, ref_length_m=length)
+            # Video (and photo-from-video) frames are temporally ordered.
+            matcher = "sequential" if tier == "video" or "photo_from_video" in media_note else "exhaustive"
+            sfm = reconstruct_metric_room(
+                images, workspace, ref_length_m=length, matcher=matcher
+            )
             room = sfm.room
             sfm_notes = sfm.notes
             if sfm.ceiling_height_m is not None:
@@ -346,30 +370,13 @@ def run_media_tier(
                 h = sfm.ceiling_height_m
                 pad = max(h * frac, 0.15 if sfm.ceiling_source == "plane" else 0.5)
                 ceiling = measurement(h, h - pad, h + pad)
-            media_note = f"{media_note}; colmap_ok"
+            media_note = f"{media_note}; colmap_ok matcher={matcher}"
         except SfMError as exc:
-            sfm_notes = f"colmap_failed={exc}"
-            media_note = f"{media_note}; colmap_fallback"
-
-    if room is None:
-        if length is None or width is None:
             raise SystemExit(
-                "photo/video on a plain phone capture needs metric scale after SfM failure.\n"
-                "Pass both --ref-length-m and --ref-width-m (tape the two wall spans), "
-                "or provide benchmark/ground_truth.csv for this folder name.\n"
-                "If the input is a Stray Scanner export (odometry.csv + depth/), "
-                "re-run without those flags — metric reconstruction is used automatically.\n"
-                f"capture_dir={capture_dir}"
-            )
-        room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
-        if ceiling is None:
-            if ceiling_m is not None:
-                frac = 0.08 if tier == "photo" else 0.03
-                ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
-            else:
-                ceiling = measurement(2.5, 1.5, 3.5)
-        method_note = f"method=ref_rectangle; scale_source={'+'.join(scale_src_parts) or 'cli'}"
-    else:
+                _colmap_failure_message(
+                    exc, images=images, capture_dir=capture_dir, tier=tier
+                )
+            ) from exc
         method_note = f"method=colmap_sfm; scale_source={'+'.join(scale_src_parts)}; {sfm_notes}"
         if ceiling is None:
             if ceiling_m is not None:
@@ -377,6 +384,21 @@ def run_media_tier(
                 ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
             else:
                 ceiling = measurement(2.5, 1.5, 3.5)
+    else:
+        # Explicit --no-colmap: GT/CLI rectangle for benchmark ablations only.
+        if length is None or width is None:
+            raise SystemExit(
+                "--no-colmap requires both length and width "
+                "(--ref-length-m/--ref-width-m or ground_truth.csv).\n"
+                f"capture_dir={capture_dir}"
+            )
+        room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
+        if ceiling_m is not None:
+            frac = 0.08 if tier == "photo" else 0.03
+            ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
+        else:
+            ceiling = measurement(2.5, 1.5, 3.5)
+        method_note = f"method=ref_rectangle; scale_source={'+'.join(scale_src_parts) or 'cli'}"
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
@@ -393,7 +415,7 @@ def run_media_tier(
     return {
         "capture_id": capture_dir.name,
         "tier": tier,
-        "device": "Android/iPhone handheld (native camera)",
+        "device": "Android/iPhone handheld (native camera / RGB video)",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "rooms": [room_json],
         "stitched_plan": {
@@ -475,16 +497,45 @@ def main() -> None:
         "--input",
         type=Path,
         default=None,
-        help="capture directory (samples/stray/<name> or samples/local/<name>; short samples/<name> also resolves)",
+        help="capture directory under samples/ (or any path). Short names resolve.",
     )
-    parser.add_argument("--tier", required=True, choices=["lidar", "photo", "video"])
-    parser.add_argument("--out", required=True, type=Path, help="output directory")
+    parser.add_argument(
+        "--tier",
+        choices=["lidar", "photo", "video"],
+        default=None,
+        help="modality: lidar | photo | video",
+    )
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="output directory (default: out/<input_folder_name>/)",
+    )
     parser.add_argument("--ref-length-m", type=float, default=None, help="photo/video long-wall metres")
     parser.add_argument("--ref-width-m", type=float, default=None, help="photo/video short-wall metres")
     parser.add_argument(
+        "--ref-from",
+        type=Path,
+        default=None,
+        help="LiDAR golden JSON file or dir — longest wall used as COLMAP scale",
+    )
+    parser.add_argument(
         "--no-colmap",
         action="store_true",
-        help="skip COLMAP and use ref-rectangle layout for photo/video",
+        help="skip COLMAP; use GT/CLI rectangle (benchmark ablations only)",
+    )
+    parser.add_argument(
+        "--colmap-frames",
+        type=int,
+        default=DEFAULT_COLMAP_FRAMES,
+        help=f"frames to extract from video for photo/video COLMAP (default {DEFAULT_COLMAP_FRAMES})",
+    )
+    parser.add_argument(
+        "--compare",
+        nargs=2,
+        metavar=("GOLDEN", "CANDIDATE"),
+        default=None,
+        help="compare two output JSON files/dirs (LiDAR golden vs photo/video)",
     )
     parser.add_argument(
         "--wall-method",
@@ -506,31 +557,69 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.compare:
+        golden = load_output_json(Path(args.compare[0]))
+        candidate = load_output_json(Path(args.compare[1]))
+        comparison = compare_output_jsons(golden, candidate)
+        out_path = Path(args.out) if args.out else Path("out") / "comparison.json"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump(comparison, f, indent=2)
+        status = "PASS" if comparison.get("overall_pass") else "FAIL"
+        print(f"comparison: {status} → {out_path}")
+        ac = comparison.get("area_comparison") or {}
+        if ac:
+            print(
+                f"area error: {ac.get('error_percent', float('nan')):.1f}% "
+                f"(golden={ac.get('area_lidar_m2')} candidate={ac.get('area_colmap_m2')})"
+            )
+        for w in comparison.get("wall_comparison") or []:
+            print(
+                f"  wall rank{w['rank']}: err={w['error_percent']:.1f}% "
+                f"pass={w['pass']}"
+            )
+        raise SystemExit(0 if comparison.get("overall_pass") else 1)
+
+    if args.colmap_frames < 3:
+        raise SystemExit("--colmap-frames must be >= 3")
+
     if args.stitch_gt:
+        if args.tier is None:
+            raise SystemExit("--tier is required with --stitch-gt")
         room_ids = [r.strip() for r in args.stitch_gt.split(",") if r.strip()]
-        output = run_stitch_gt(room_ids, args.out, args.tier, align_openings=(args.drift_align == "on"))
-        json_path = _emit(output, args.out, f"stitched_{'_'.join(room_ids)}_{args.tier}_{args.drift_align}")
+        out_dir = args.out or (REPO_ROOT / "out" / f"stitched_{'_'.join(room_ids)}")
+        output = run_stitch_gt(room_ids, out_dir, args.tier, align_openings=(args.drift_align == "on"))
+        json_path = _emit(output, out_dir, f"stitched_{'_'.join(room_ids)}_{args.tier}_{args.drift_align}")
     else:
         if args.input is None:
-            raise SystemExit("--input is required unless --stitch-gt is set")
+            raise SystemExit("--input is required unless --stitch-gt or --compare is set")
+        if args.tier is None:
+            raise SystemExit("--tier is required (lidar | photo | video)")
         try:
             capture_dir = resolve_capture_dir(args.input, repo_root=REPO_ROOT)
         except FileNotFoundError as exc:
             raise SystemExit(str(exc)) from exc
+        out_dir = args.out or (REPO_ROOT / "out" / capture_dir.name)
         if args.tier == "lidar":
-            output = run_lidar_tier(capture_dir, args.out, wall_method=args.wall_method)
+            if not _is_stray_capture(capture_dir):
+                raise SystemExit(
+                    f"--tier lidar requires a Stray export (odometry.csv + depth/) under {capture_dir}\n"
+                    "For RGB-only folders use --tier video or --tier photo."
+                )
+            output = run_lidar_tier(capture_dir, out_dir, wall_method=args.wall_method)
         else:
             output = run_media_tier(
                 capture_dir,
-                args.out,
+                out_dir,
                 args.tier,
                 args.ref_length_m,
                 args.ref_width_m,
                 use_colmap=not args.no_colmap,
+                colmap_frames=args.colmap_frames,
+                ref_from=args.ref_from,
             )
-        json_path = _emit(
-            output, args.out, capture_dir.name if args.tier == "lidar" else f"{capture_dir.name}_{args.tier}"
-        )
+        stem = capture_dir.name if args.tier == "lidar" else f"{capture_dir.name}_{args.tier}"
+        json_path = _emit(output, out_dir, stem)
 
     print(f"wrote {json_path}")
     print(f"wrote {output['stitched_plan']['rendered_plan_path']}")

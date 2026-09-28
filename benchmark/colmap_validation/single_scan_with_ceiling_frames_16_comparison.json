@@ -1,0 +1,35 @@
+{
+  "capture_id": "single_scan_with_ceiling",
+  "tier": "video",
+  "num_frames": 16,
+  "colmap_success": false,
+  "colmap_error": "COLMAP mapper produced no models under out/colmap_baseline/single_scan_with_ceiling/single_scan_with_ceiling_video_colmap/sparse",
+  "colmap_notes": null,
+  "pass_criteria": {
+    "wall_error_frac": 0.05,
+    "area_error_frac": 0.1,
+    "opening_count_tolerance": 1
+  },
+  "wall_comparison": [],
+  "area_comparison": null,
+  "shape_comparison": {
+    "num_walls_lidar": 4,
+    "num_walls_colmap": 0,
+    "topology_match": false
+  },
+  "opening_comparison": {
+    "count_lidar": 3,
+    "count_colmap": 0,
+    "pass": false
+  },
+  "ceiling_comparison": {
+    "ceiling_lidar_m": 1.8343757608984845,
+    "ceiling_colmap_m": null,
+    "pass": false,
+    "note": "COLMAP did not estimate ceiling"
+  },
+  "overall_pass": false,
+  "ref_length_m": 5.92084360222627,
+  "video": "rgb.mp4",
+  "colmap_frames_requested": 16
+}

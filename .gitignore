@@ -6,6 +6,7 @@ out/
 # Extracted video frames are raw imagery.
 *_video_frames/
 *_rgb_frames/
+*_photo_frames/
 *.egg-info/
 benchmark/runs/
 

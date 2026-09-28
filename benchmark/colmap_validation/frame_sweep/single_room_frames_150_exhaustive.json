@@ -1,0 +1,77 @@
+{
+  "capture_id": "single_room",
+  "tier": "video",
+  "num_frames": 150,
+  "colmap_success": true,
+  "colmap_error": null,
+  "colmap_notes": "colmap_points=438; sparse_pca_up; ceiling_rejected=0.33m; scale=0.9766 ref_length_m=3.6446866385735275",
+  "pass_criteria": {
+    "wall_error_frac": 0.05,
+    "area_error_frac": 0.1,
+    "opening_count_tolerance": 1
+  },
+  "wall_comparison": [
+    {
+      "rank": 0,
+      "length_lidar_m": 3.6446866385735275,
+      "length_colmap_m": 3.6446866385735275,
+      "difference_m": 0.0,
+      "error_percent": 0.0,
+      "pass": true
+    },
+    {
+      "rank": 1,
+      "length_lidar_m": 3.644686638573527,
+      "length_colmap_m": 3.6446865480285324,
+      "difference_m": 9.05449946131398e-08,
+      "error_percent": 2.4843012196126055e-06,
+      "pass": true
+    },
+    {
+      "rank": 2,
+      "length_lidar_m": 2.718424700597193,
+      "length_colmap_m": 3.194271968096874,
+      "difference_m": 0.475847267499681,
+      "error_percent": 17.504522652223738,
+      "pass": false
+    },
+    {
+      "rank": 3,
+      "length_lidar_m": 2.718424700597193,
+      "length_colmap_m": 3.194271724015673,
+      "difference_m": 0.47584702341847995,
+      "error_percent": 17.504513673450077,
+      "pass": false
+    }
+  ],
+  "area_comparison": {
+    "area_lidar_m2": 9.907806184234833,
+    "area_colmap_m2": 11.642119772680195,
+    "difference_m2": 1.734313588445362,
+    "error_percent": 17.504516703253422,
+    "pass": false
+  },
+  "shape_comparison": {
+    "num_walls_lidar": 4,
+    "num_walls_colmap": 4,
+    "topology_match": true,
+    "colmap_method": "colmap_oriented_rect",
+    "colmap_low_confidence": true
+  },
+  "opening_comparison": {
+    "count_lidar": 0,
+    "count_colmap": 5,
+    "difference": 5,
+    "pass": false
+  },
+  "ceiling_comparison": {
+    "ceiling_lidar_m": 2.5,
+    "ceiling_colmap_m": null,
+    "pass": false,
+    "note": "COLMAP did not estimate ceiling"
+  },
+  "overall_pass": false,
+  "ref_length_m": 3.6446866385735275,
+  "video": "rgb.mp4",
+  "colmap_frames_requested": 150
+}

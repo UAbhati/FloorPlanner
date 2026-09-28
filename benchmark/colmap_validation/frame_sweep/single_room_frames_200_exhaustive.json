@@ -1,0 +1,77 @@
+{
+  "capture_id": "single_room",
+  "tier": "video",
+  "num_frames": 200,
+  "colmap_success": true,
+  "colmap_error": null,
+  "colmap_notes": "colmap_points=526; plane_fit_failed=best plane only had 101 inliers, need >= 500; sparse_pca_up; ceiling_rejected=0.31m; scale=0.9838 ref_length_m=3.6446866385735275",
+  "pass_criteria": {
+    "wall_error_frac": 0.05,
+    "area_error_frac": 0.1,
+    "opening_count_tolerance": 1
+  },
+  "wall_comparison": [
+    {
+      "rank": 0,
+      "length_lidar_m": 3.6446866385735275,
+      "length_colmap_m": 3.6446866385735275,
+      "difference_m": 0.0,
+      "error_percent": 0.0,
+      "pass": true
+    },
+    {
+      "rank": 1,
+      "length_lidar_m": 3.644686638573527,
+      "length_colmap_m": 3.6446863981534188,
+      "difference_m": 2.4042010826619276e-07,
+      "error_percent": 6.5964548425564885e-06,
+      "pass": true
+    },
+    {
+      "rank": 2,
+      "length_lidar_m": 2.718424700597193,
+      "length_colmap_m": 3.2398850726616795,
+      "difference_m": 0.5214603720644866,
+      "error_percent": 19.182446802735804,
+      "pass": false
+    },
+    {
+      "rank": 3,
+      "length_lidar_m": 2.718424700597193,
+      "length_colmap_m": 3.2398849679439397,
+      "difference_m": 0.5214602673467468,
+      "error_percent": 19.182442950587912,
+      "pass": false
+    }
+  ],
+  "area_comparison": {
+    "area_lidar_m2": 9.907806184234833,
+    "area_colmap_m2": 11.808365254545397,
+    "difference_m2": 1.900559070310564,
+    "error_percent": 19.18244094575354,
+    "pass": false
+  },
+  "shape_comparison": {
+    "num_walls_lidar": 4,
+    "num_walls_colmap": 4,
+    "topology_match": true,
+    "colmap_method": "colmap_oriented_rect",
+    "colmap_low_confidence": true
+  },
+  "opening_comparison": {
+    "count_lidar": 0,
+    "count_colmap": 6,
+    "difference": 6,
+    "pass": false
+  },
+  "ceiling_comparison": {
+    "ceiling_lidar_m": 2.5,
+    "ceiling_colmap_m": null,
+    "pass": false,
+    "note": "COLMAP did not estimate ceiling"
+  },
+  "overall_pass": false,
+  "ref_length_m": 3.6446866385735275,
+  "video": "rgb.mp4",
+  "colmap_frames_requested": 200
+}

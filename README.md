@@ -50,9 +50,22 @@ samples/stray/single_scan_floor/
 samples/stray/single_scan_with_ceiling/
 ```
 
+Link RGB-only siblings for COLMAP video/photo tests:
+
+```bash
+for s in single_room single_scan_floor single_scan_with_ceiling; do
+  mkdir -p "samples/stray/${s}_rgb"
+  ln -sfn "../$s/rgb.mp4" "samples/stray/${s}_rgb/rgb.mp4"
+done
+```
+
 ```bash
 source .venv/bin/activate
-python run.py --input samples/stray/single_scan_with_ceiling --tier lidar --out out/
+# LiDAR golden → out/single_room/
+python run.py --input samples/stray/single_room --tier lidar
+# COLMAP video → out/single_room_rgb/
+python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/single_room/
+python run.py --compare out/single_room/ out/single_room_rgb/
 ```
 
 ### Or browse committed outputs (zero media)
@@ -66,8 +79,7 @@ python run.py --input samples/stray/single_scan_with_ceiling --tier lidar --out 
 
 ```bash
 mkdir -p /tmp/anyroom/photos   # drop 2–8 stills
-python run.py --input /tmp/anyroom --tier photo \
-  --ref-length-m <long_wall_m> --ref-width-m <short_wall_m> --out out/
+python run.py --input /tmp/anyroom --tier photo --ref-length-m <long_wall_m>
 ```
 
 ## Walk-in (cold CLI)
@@ -76,9 +88,9 @@ Unzipped Stray folder anywhere on disk (`odometry.csv` + `depth/` + `rgb.mp4`):
 
 ```bash
 source .venv/bin/activate
-python run.py --input /path/to/stray_export --tier lidar --out out/walkin
-python run.py --input /path/to/stray_export --tier video --out out/walkin
-python run.py --input /path/to/stray_export --tier photo --out out/walkin
+python run.py --input /path/to/stray_export --tier lidar
+# RGB-only COLMAP (folder with just rgb.mp4, or samples/stray/*_rgb):
+python run.py --input /path/to/stray_rgb --tier video --ref-from out/<lidar_folder>/
 ```
 
 Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).

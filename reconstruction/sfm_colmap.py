@@ -7,7 +7,8 @@ Metric scale is recovered by fitting the same polar/oriented-rect room polygon
 used on LiDAR, then scaling so the longer wall matches ``ref_length_m``.
 
 If COLMAP fails (too few images, no GPU, degenerate motion), raises
-``SfMError`` so the caller can fall back to the ref-rectangle path.
+``SfMError`` so the caller can fail honestly (or run ``--no-colmap`` for
+explicit GT-rectangle benchmark ablations).
 """
 from __future__ import annotations
 
@@ -18,7 +19,7 @@ from pathlib import Path
 
 import numpy as np
 
-from reconstruction.planes import find_floor, find_floor_and_ceiling, rough_height_above_floor
+from reconstruction.planes import find_floor_and_ceiling
 from reconstruction.room_polygon import (
     RoomPolygon,
     build_room_polygon,
@@ -99,8 +100,22 @@ def _parse_points3d_txt(path: Path) -> np.ndarray:
     return np.asarray(pts, dtype=np.float64)
 
 
-def run_colmap(image_paths: list[Path], workspace: Path) -> np.ndarray:
-    """Run COLMAP and return sparse XYZ points (arbitrary scale)."""
+def run_colmap(
+    image_paths: list[Path],
+    workspace: Path,
+    *,
+    matcher: str = "exhaustive",
+    max_num_features: int = 16384,
+    sequential_overlap: int = 10,
+) -> np.ndarray:
+    """Run COLMAP and return sparse XYZ points (arbitrary scale).
+
+    ``matcher``: ``exhaustive`` (unordered photo sets) or ``sequential``
+    (ordered video frames — preferred for Stray / phone walkthroughs).
+    """
+    if matcher not in {"exhaustive", "sequential"}:
+        raise SfMError(f"unknown matcher={matcher!r}; use exhaustive|sequential")
+
     colmap = _ensure_colmap()
     workspace.mkdir(parents=True, exist_ok=True)
     image_dir = workspace / "images"
@@ -108,9 +123,12 @@ def run_colmap(image_paths: list[Path], workspace: Path) -> np.ndarray:
     sparse_dir = workspace / "sparse"
     sparse_dir.mkdir(exist_ok=True)
 
-    # Invalidate cache when the input image set changes (count + names).
+    # Invalidate cache when the input image set or COLMAP settings change.
     manifest = workspace / "image_manifest.txt"
-    fingerprint = "\n".join(f"{p.name}:{p.stat().st_size}" for p in sorted(image_paths, key=lambda x: x.name))
+    fingerprint = (
+        f"matcher={matcher};features={max_num_features};overlap={sequential_overlap}\n"
+        + "\n".join(f"{p.name}:{p.stat().st_size}" for p in sorted(image_paths, key=lambda x: x.name))
+    )
     existing = sparse_dir / "0" / "points3D.txt"
     if existing.is_file() and manifest.is_file() and manifest.read_text() == fingerprint:
         try:
@@ -141,18 +159,38 @@ def run_colmap(image_paths: list[Path], workspace: Path) -> np.ndarray:
             "1",
             "--FeatureExtraction.use_gpu",
             "0",
+            "--SiftExtraction.max_num_features",
+            str(max_num_features),
+            "--SiftExtraction.estimate_affine_shape",
+            "1",
+            "--SiftExtraction.domain_size_pooling",
+            "1",
         ]
     )
-    _run(
-        [
-            colmap,
-            "exhaustive_matcher",
-            "--database_path",
-            str(db_path),
-            "--FeatureMatching.use_gpu",
-            "0",
-        ]
-    )
+    if matcher == "sequential":
+        _run(
+            [
+                colmap,
+                "sequential_matcher",
+                "--database_path",
+                str(db_path),
+                "--FeatureMatching.use_gpu",
+                "0",
+                "--SequentialMatching.overlap",
+                str(sequential_overlap),
+            ]
+        )
+    else:
+        _run(
+            [
+                colmap,
+                "exhaustive_matcher",
+                "--database_path",
+                str(db_path),
+                "--FeatureMatching.use_gpu",
+                "0",
+            ]
+        )
     _run(
         [
             colmap,
@@ -172,6 +210,8 @@ def run_colmap(image_paths: list[Path], workspace: Path) -> np.ndarray:
             "15",
             "--Mapper.abs_pose_min_inlier_ratio",
             "0.15",
+            "--Mapper.min_num_matches",
+            "15",
         ],
         allow_fail=True,
     )
@@ -226,10 +266,18 @@ def reconstruct_metric_room(
     image_paths: list[Path],
     workspace: Path,
     ref_length_m: float,
+    *,
+    matcher: str = "exhaustive",
+    max_num_features: int = 16384,
 ) -> SfMResult:
     """SfM → floor/ceiling → room polygon, scaled so longest wall = ref_length_m."""
     try:
-        points = run_colmap(image_paths, workspace)
+        points = run_colmap(
+            image_paths,
+            workspace,
+            matcher=matcher,
+            max_num_features=max_num_features,
+        )
     except SfMError:
         raise
     except Exception as exc:  # noqa: BLE001 — surface any COLMAP/parse failure to caller
@@ -239,37 +287,44 @@ def reconstruct_metric_room(
     mad = np.median(np.abs(points - med), axis=0) + 1e-6
     keep = np.all(np.abs(points - med) < 10 * mad, axis=1)
     points = points[keep]
-    if len(points) < 200:
+    if len(points) < 100:
         raise SfMError(
             f"sparse reconstruction too thin ({len(points)} pts); "
-            "need more overlapping views (or use --no-colmap / denser video frames)"
+            "need more overlapping views (or denser video frames via --colmap-frames)"
         )
 
     notes = [f"colmap_points={len(points)}"]
     ceiling_height_m: float | None = None
     ceiling_source = "none"
+    up: np.ndarray
+    wall_band: np.ndarray
 
-    try:
-        if len(points) >= 500:
+    used_plane = False
+    if len(points) >= 500:
+        try:
             fc = find_floor_and_ceiling(points)
             up = fc.up_normal
             floor_off, ceil_off = fc.floor.offset, fc.ceiling.offset
             ceiling_height_m = abs(ceil_off - floor_off)
             ceiling_source = "plane"
             wall_band = extract_wall_band(points, up, floor_off, ceil_off)
-        else:
-            notes.append("sparse_pca_up")
-            up = _pca_up_axis(points)
-            heights = points @ up
-            floor_off = float(np.percentile(heights, 10))
-            ceil_off = float(np.percentile(heights, 90))
-            ceiling_height_m = abs(ceil_off - floor_off)
-            ceiling_source = "rough"
-            lo = floor_off + 0.05 * (ceil_off - floor_off)
-            hi = ceil_off - 0.05 * (ceil_off - floor_off)
-            wall_band = points[(heights >= lo) & (heights <= hi)]
-    except Exception as exc:  # noqa: BLE001
-        raise SfMError(f"plane/wall-band failed: {exc}") from exc
+            used_plane = True
+        except ValueError as exc:
+            # Sparse SfM clouds often clear the 500-pt gate but lack a dominant
+            # RANSAC floor (MIN_PLANE_INLIERS=500). Fall back to PCA percentiles.
+            notes.append(f"plane_fit_failed={exc}")
+
+    if not used_plane:
+        notes.append("sparse_pca_up")
+        up = _pca_up_axis(points)
+        heights = points @ up
+        floor_off = float(np.percentile(heights, 10))
+        ceil_off = float(np.percentile(heights, 90))
+        ceiling_height_m = abs(ceil_off - floor_off)
+        ceiling_source = "rough"
+        lo = floor_off + 0.05 * (ceil_off - floor_off)
+        hi = ceil_off - 0.05 * (ceil_off - floor_off)
+        wall_band = points[(heights >= lo) & (heights <= hi)]
 
     if len(wall_band) < 50:
         raise SfMError(f"wall band too thin ({len(wall_band)} points)")

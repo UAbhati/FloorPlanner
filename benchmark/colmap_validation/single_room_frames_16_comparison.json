@@ -1,0 +1,35 @@
+{
+  "capture_id": "single_room",
+  "tier": "video",
+  "num_frames": 16,
+  "colmap_success": false,
+  "colmap_error": "COLMAP mapper produced no models under out/colmap_baseline/single_room/single_room_video_colmap/sparse",
+  "colmap_notes": null,
+  "pass_criteria": {
+    "wall_error_frac": 0.05,
+    "area_error_frac": 0.1,
+    "opening_count_tolerance": 1
+  },
+  "wall_comparison": [],
+  "area_comparison": null,
+  "shape_comparison": {
+    "num_walls_lidar": 4,
+    "num_walls_colmap": 0,
+    "topology_match": false
+  },
+  "opening_comparison": {
+    "count_lidar": 0,
+    "count_colmap": 0,
+    "pass": false
+  },
+  "ceiling_comparison": {
+    "ceiling_lidar_m": 2.5,
+    "ceiling_colmap_m": null,
+    "pass": false,
+    "note": "COLMAP did not estimate ceiling"
+  },
+  "overall_pass": false,
+  "ref_length_m": 3.6446866385735275,
+  "video": "rgb.mp4",
+  "colmap_frames_requested": 16
+}

@@ -64,8 +64,12 @@
       "properties": {
         "id": { "type": "string" },
         "surface_id": { "type": "string" },
-        "class": { "type": "string", "description": "e.g. water_stain, crack, mold, structural" },
+        "class": { "type": "string", "description": "e.g. water_stain, surface_crack, mold, structural" },
         "extent_m2": { "$ref": "#/definitions/measurement" },
+        "length_m": {
+          "$ref": "#/definitions/measurement",
+          "description": "optional linear extent for elongated marks (cracks)"
+        },
         "concealed_flag": { "type": "boolean" },
         "concealed_rule": { "type": ["string", "null"], "description": "rule name that fired, null if not concealed" }
       }

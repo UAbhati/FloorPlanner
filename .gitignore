@@ -13,6 +13,7 @@ benchmark/runs/
 samples/*
 !samples/*/
 samples/*/*
+!samples/README.md
 !samples/*/README.md
 !samples/STRAY_SAMPLES.md
 

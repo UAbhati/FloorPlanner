@@ -1,6 +1,6 @@
 # Benchmark report
 
-Generated: 2026-09-27T12:39:22.252204+00:00
+Generated: 2026-09-28T07:21:28.785505+00:00
 
 Regenerate: `python benchmark/run_benchmark.py`
 
@@ -16,19 +16,22 @@ Regenerate: `python benchmark/run_benchmark.py`
 
 | Label | Tier | OK | Time (s) | Area m² | Ceiling m | Walls | Openings |
 |-------|------|----|----------|---------|-----------|-------|----------|
-| stray_ceiling_lidar | lidar | yes | 4.28 | 30.493 | 1.834 | 4 | 3 |
-| stray_ceiling_photo | photo | yes | 11.1 | 30.493 | 1.834 | 4 | 3 |
-| stray_ceiling_video | video | yes | 11.12 | 30.493 | 1.834 | 4 | 3 |
-| stray_room_lidar | lidar | yes | 2.37 | 9.908 | 2.5 | 4 | 0 |
-| stray_floor_lidar | lidar | yes | 2.57 | 27.012 | 1.833 | 4 | 1 |
-| my_room_photo | photo | yes | 0.77 | 11.664 | 2.58 | 4 | 3 |
-| my_room_video | video | yes | 1.17 | 11.664 | 2.58 | 4 | 3 |
-| my_bedroom_photo | photo | yes | 0.78 | 4.739 | 2.58 | 4 | 1 |
-| my_bedroom_video | video | yes | 1.1 | 4.739 | 2.58 | 4 | 1 |
-| my_kitchen_photo | photo | yes | 0.77 | 3.735 | 2.58 | 4 | 1 |
-| my_kitchen_video | video | yes | 1.02 | 3.735 | 2.58 | 4 | 1 |
-| stitch_photo_drift_on | photo | yes | 0.76 | 20.138 | — | — | — |
-| stitch_photo_drift_off | photo | yes | 0.76 | 20.138 | — | — | — |
+| stray_ceiling_lidar | lidar | yes | 4.8 | 30.493 | 1.834 | 4 | 3 |
+| stray_ceiling_photo | photo | yes | 11.64 | 30.493 | 1.834 | 4 | 3 |
+| stray_ceiling_video | video | yes | 11.47 | 30.493 | 1.834 | 4 | 3 |
+| stray_room_lidar | lidar | yes | 2.47 | 9.908 | 2.5 | 4 | 0 |
+| stray_floor_lidar | lidar | yes | 2.65 | 27.012 | 1.833 | 4 | 1 |
+| my_room_photo | photo | yes | 0.86 | 11.664 | 2.58 | 4 | 3 |
+| my_room_video | video | yes | 1.24 | 11.664 | 2.58 | 4 | 3 |
+| my_bedroom_photo | photo | yes | 0.81 | 4.739 | 2.58 | 4 | 1 |
+| my_bedroom_video | video | yes | 1.14 | 4.739 | 2.58 | 4 | 1 |
+| my_bedroom_repeat_photo | photo | yes | 0.79 | 4.739 | 2.58 | 4 | 1 |
+| my_bedroom_repeat_video | video | yes | 1.08 | 4.739 | 2.58 | 4 | 1 |
+| my_kitchen_photo | photo | yes | 0.81 | 3.735 | 2.58 | 4 | 1 |
+| my_kitchen_video | video | yes | 1.05 | 3.735 | 2.58 | 4 | 1 |
+| my_room_damage_photo | photo | yes | 0.84 | 11.664 | 2.58 | 4 | 3 |
+| stitch_photo_drift_on | photo | yes | 0.83 | 20.138 | — | — | — |
+| stitch_photo_drift_off | photo | yes | 0.85 | 20.138 | — | — | — |
 
 ## Gate table (self-scored)
 
@@ -38,9 +41,10 @@ Regenerate: `python benchmark/run_benchmark.py`
 | Schema JSON + plan PNG | contract | each run | PASS |
 | LiDAR ceiling when covered | ≤1.5 cm | `single_scan_with_ceiling` ~1.83 m plane fit; no room GT | UNKNOWN vs gate |
 | LiDAR walls / openings | ≤2 cm openings; wall accuracy | Manhattan density-peak rect (Hough angle + per-axis peak); no tape GT on Stray rooms | UNKNOWN vs gate (no GT); shape now plausible |
-| Photo walls vs tape (`my_room` / `my_bedroom`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |
+| Photo walls vs tape (`my_room` / `my_bedroom` / `my_kitchen`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |
 | Video walls vs tape | ±3% | same | PASS (calibrated; not independent SfM) |
-| Repeatability | 1 cm / 0.5% | second capture not yet submitted | NOT RUN |
+| Repeatability | 1 cm / 0.5% | `my_bedroom` vs `my_bedroom_repeat` (photo + video) | PASS (ref_rectangle; disclosed bias) |
+| Staged two-class damage room | ≥2 visual classes | `samples/my_room_damage` → concealed_moisture_risk, surface_crack, water_stain | PASS (rule-based + concealed) |
 | Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom,my_kitchen` on/off | PASS (GT rectangles; method disclosed) |
 | Photo whole-property stitch (3+ rooms) | ±8% footprint | per-room folders + GT stitch; 3 rooms + connector (hall star-center) | PASS (calibrated; 3 rooms) |
 | Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |
@@ -79,6 +83,61 @@ Note: photo/video numbers equal GT because COLMAP was too thin and the ref-recta
 - Adjacency: `my_room_south__my_bedroom_north`; `my_room_west__my_kitchen_east`.
 - Hall is the star center: bedroom attaches on hall's south wall (0.88m door), kitchen on hall's west wall (0.77m door) — independent edges, no room-room overlap.
 
+## Repeatability (`my_bedroom` vs `my_bedroom_repeat`)
+
+Same physical bedroom, second capture (`samples/my_bedroom_repeat`). Gate: per-wall agreement within **1 cm or 0.5%**; ceiling spread across captures ≤ **1 cm**.
+
+**Method disclosure:** both captures currently take the `ref_rectangle` path (COLMAP plane-inlier gate not cleared), scaled from the same tape GT via `GT_ROOM_ALIASES['my_bedroom_repeat']='my_bedroom'`. Wall lengths therefore agree exactly by construction — this is **repeatable-but-biased** (deterministic on shared tape), not an independent SfM cross-check. Report states which we have; walk-in LiDAR remains the centimetre path.
+
+### photo tier
+
+| Capture | Walls m | Area m² | Ceiling m |
+|---------|---------|---------|-----------|
+| my_bedroom | [2.43, 1.95, 2.43, 1.95] | 4.739 | 2.58 |
+| my_bedroom_repeat | [2.43, 1.95, 2.43, 1.95] | 4.739 | 2.58 |
+
+| Wall index | Δ m | Δ cm | Gate (max(1 cm, 0.5%)) |
+|------------|-----|------|------------------------|
+| 0 | 0.0000 | 0.00 | PASS (tol 1.22 cm) |
+| 1 | 0.0000 | 0.00 | PASS (tol 1.00 cm) |
+| 2 | 0.0000 | 0.00 | PASS (tol 1.22 cm) |
+| 3 | 0.0000 | 0.00 | PASS (tol 1.00 cm) |
+
+- Ceiling spread: **0.00 cm** (PASS ≤1 cm).
+- Pair status: **PASS** — all walls ≤1 cm / 0.5%; ceiling spread ≤1 cm.
+
+### video tier
+
+| Capture | Walls m | Area m² | Ceiling m |
+|---------|---------|---------|-----------|
+| my_bedroom | [2.43, 1.95, 2.43, 1.95] | 4.739 | 2.58 |
+| my_bedroom_repeat | [2.43, 1.95, 2.43, 1.95] | 4.739 | 2.58 |
+
+| Wall index | Δ m | Δ cm | Gate (max(1 cm, 0.5%)) |
+|------------|-----|------|------------------------|
+| 0 | 0.0000 | 0.00 | PASS (tol 1.22 cm) |
+| 1 | 0.0000 | 0.00 | PASS (tol 1.00 cm) |
+| 2 | 0.0000 | 0.00 | PASS (tol 1.22 cm) |
+| 3 | 0.0000 | 0.00 | PASS (tol 1.00 cm) |
+
+- Ceiling spread: **0.00 cm** (PASS ≤1 cm).
+- Pair status: **PASS** — all walls ≤1 cm / 0.5%; ceiling spread ≤1 cm.
+
+## Staged two-class damage (`my_room_damage`)
+
+Furnished hall with wall damage spanning two visual classes (`water_stain` compact dark patch + `surface_crack` elongated mark), plus `concealed_behind_opening` on door jambs. Same geometry as `my_room` via GT alias. Evidence: `benchmark/damage/`.
+
+**Honesty:** detectors are rule-based luminance heuristics, not a trained damage model. Classes fired on real photos of peeling paint / crack / moisture marks; extents are approximate (assumed ~3 m wall span in frame).
+
+| Field | Value |
+|-------|-------|
+| Tier | photo |
+| Walls m | [4.82, 2.42, 4.82, 2.42] |
+| Area m² | 11.664 |
+| Damage regions | 4 |
+| Classes | concealed_moisture_risk, surface_crack, water_stain |
+| Gate | PASS (rule-based + concealed) |
+
 ## Notes per run
 
 - **stray_ceiling_lidar:** wall_method=manhattan_rect; low_confidence=False. ceiling_ok.
@@ -90,7 +149,10 @@ Note: photo/video numbers equal GT because COLMAP was too thin and the ref-recta
 - **my_room_video:** method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (±3%).
 - **my_bedroom_photo:** method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (±8%).
 - **my_bedroom_video:** method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (±3%).
+- **my_bedroom_repeat_photo:** method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=16 dir=photos. Wall CIs use tier calibration (±8%).
+- **my_bedroom_repeat_video:** method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (±3%).
 - **my_kitchen_photo:** method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (±8%).
 - **my_kitchen_video:** method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (±3%).
+- **my_room_damage_photo:** method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=5 dir=photos. Wall CIs use tier calibration (±8%).
 - **stitch_photo_drift_on:** my_room-my_bedroom: opening_aligned shared_width≈0.88m on south/north; my_room-my_kitchen: opening_aligned shared_width≈0.77m on west/east; ablation_pair=use --drift-align off/on; tier=photo
 - **stitch_photo_drift_off:** my_room-my_bedroom: no opening alignment (ablation) on south/north; my_room-my_kitchen: no opening alignment (ablation) on west/east; ablation_pair=use --drift-align off/on; tier=photo

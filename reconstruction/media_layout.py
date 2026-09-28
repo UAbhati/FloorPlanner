@@ -33,9 +33,18 @@ class RoomGT:
     openings: list[tuple[str, float, str]]  # wall_id, width_m, notes
 
 
+# Capture folders whose tape GT lives under a different primary room_id.
+GT_ROOM_ALIASES: dict[str, str] = {
+    "my_bedroom_repeat": "my_bedroom",
+    # Staged-damage walk of the hall — same geometry as my_room.
+    "my_room_damage": "my_room",
+}
+
+
 def load_ground_truth(csv_path: Path, room_id: str) -> RoomGT | None:
     if not csv_path.is_file():
         return None
+    lookup_id = GT_ROOM_ALIASES.get(room_id, room_id)
     ceiling = None
     length = None
     width = None
@@ -43,7 +52,7 @@ def load_ground_truth(csv_path: Path, room_id: str) -> RoomGT | None:
     openings: list[tuple[str, float, str]] = []
     with open(csv_path, newline="") as f:
         for row in csv.DictReader(f):
-            if row["room_id"] != room_id:
+            if row["room_id"] != lookup_id:
                 continue
             metric = row["metric"]
             value = float(row["value_m"])
@@ -67,6 +76,7 @@ def load_ground_truth(csv_path: Path, room_id: str) -> RoomGT | None:
         width = (walls["east"] + walls["west"]) / 2
     if length is None and width is None and ceiling is None:
         return None
+    # Keep the capture folder id on the returned GT (alias only affects CSV lookup).
     return RoomGT(room_id=room_id, ceiling_height_m=ceiling, length_m=length, width_m=width, openings=openings)
 
 

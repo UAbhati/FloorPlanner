@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-09-27T12:39:22.250531+00:00",
+  "generated_at": "2026-09-28T07:21:28.783812+00:00",
   "runs": [
     {
       "label": "stray_ceiling_lidar",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/single_scan_with_ceiling --tier lidar --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_lidar",
       "ok": true,
-      "elapsed_s": 4.28,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_ok.\n",
+      "elapsed_s": 4.8,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_lidar/single_scan_with_ceiling.json",
       "tier": "lidar",
@@ -22,14 +22,17 @@
       "ceiling_height_m": 1.834,
       "n_openings": 3,
       "n_damage": 2,
+      "damage_classes": [
+        "concealed_moisture_risk"
+      ],
       "notes": "wall_method=manhattan_rect; low_confidence=False. ceiling_ok."
     },
     {
       "label": "stray_ceiling_photo",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier photo --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/single_scan_with_ceiling --tier photo --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_photo",
       "ok": true,
-      "elapsed_s": 11.1,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo_plan.png\nnotes: method=stray_metric_cloud; tier=photo; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b18% for this tier.\n",
+      "elapsed_s": 11.64,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo_plan.png\nnotes: method=stray_metric_cloud; tier=photo; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b18% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_photo/single_scan_with_ceiling_photo.json",
       "tier": "photo",
@@ -44,15 +47,19 @@
       "floor_area_m2": 30.493,
       "ceiling_height_m": 1.834,
       "n_openings": 3,
-      "n_damage": 4,
+      "n_damage": 2,
+      "damage_classes": [
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=stray_metric_cloud; tier=photo; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b18% for this tier."
     },
     {
       "label": "stray_ceiling_video",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_with_ceiling --tier video --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/single_scan_with_ceiling --tier video --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_video",
       "ok": true,
-      "elapsed_s": 11.12,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video_plan.png\nnotes: method=stray_metric_cloud; tier=video; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b13% for this tier.\n",
+      "elapsed_s": 11.47,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video_plan.png\nnotes: method=stray_metric_cloud; tier=video; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b13% for this tier.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_ceiling_video/single_scan_with_ceiling_video.json",
       "tier": "video",
@@ -67,15 +74,19 @@
       "floor_area_m2": 30.493,
       "ceiling_height_m": 1.834,
       "n_openings": 3,
-      "n_damage": 4,
+      "n_damage": 2,
+      "damage_classes": [
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=stray_metric_cloud; tier=video; wall_method=manhattan_rect; low_confidence=False. ceiling_ok. Wall CIs widened to \u00b13% for this tier."
     },
     {
       "label": "stray_room_lidar",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_room --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/single_room --tier lidar --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_room_lidar",
       "ok": true,
-      "elapsed_s": 2.37,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar/single_room.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_room_lidar/single_room_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement\n",
+      "elapsed_s": 2.47,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_room_lidar/single_room.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_room_lidar/single_room_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_room_lidar/single_room.json",
       "tier": "lidar",
@@ -91,14 +102,15 @@
       "ceiling_height_m": 2.5,
       "n_openings": 0,
       "n_damage": 0,
+      "damage_classes": [],
       "notes": "wall_method=manhattan_rect; low_confidence=False. ceiling_coverage_insufficient: candidate ceiling height 1.25m < 1.7m (likely furniture, not ceiling) ceiling_height_unknown; CI is residential prior 1.5-3.5m not a measurement"
     },
     {
       "label": "stray_floor_lidar",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/single_scan_floor --tier lidar --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/single_scan_floor --tier lidar --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_floor_lidar",
       "ok": true,
-      "elapsed_s": 2.57,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stray_floor_lidar/single_scan_floor_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_ok.\n",
+      "elapsed_s": 2.65,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_floor_lidar/single_scan_floor.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stray_floor_lidar/single_scan_floor_plan.png\nnotes: wall_method=manhattan_rect; low_confidence=False. ceiling_ok.\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stray_floor_lidar/single_scan_floor.json",
       "tier": "lidar",
@@ -114,14 +126,17 @@
       "ceiling_height_m": 1.833,
       "n_openings": 1,
       "n_damage": 1,
+      "damage_classes": [
+        "concealed_moisture_risk"
+      ],
       "notes": "wall_method=manhattan_rect; low_confidence=False. ceiling_ok."
     },
     {
       "label": "my_room_photo",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_room --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_photo",
       "ok": true,
-      "elapsed_s": 0.77,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_photo/my_room_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=17 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "elapsed_s": 0.86,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_photo/my_room_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_photo/my_room_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=17 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_photo/my_room_photo.json",
       "tier": "photo",
@@ -136,15 +151,20 @@
       "floor_area_m2": 11.664,
       "ceiling_height_m": 2.58,
       "n_openings": 3,
-      "n_damage": 6,
+      "n_damage": 4,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=17 dir=photos. Wall CIs use tier calibration (\u00b18%)."
     },
     {
       "label": "my_room_video",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_room --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_room --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_video",
       "ok": true,
-      "elapsed_s": 1.17,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_room_video/my_room_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
+      "elapsed_s": 1.24,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_video/my_room_video.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_video/my_room_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_room_video/my_room_video.json",
       "tier": "video",
@@ -159,15 +179,20 @@
       "floor_area_m2": 11.664,
       "ceiling_height_m": 2.58,
       "n_openings": 3,
-      "n_damage": 5,
+      "n_damage": 4,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
     },
     {
       "label": "my_bedroom_photo",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_bedroom --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_bedroom --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_photo",
       "ok": true,
-      "elapsed_s": 0.78,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo/my_bedroom_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_photo/my_bedroom_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "elapsed_s": 0.81,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_photo/my_bedroom_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_photo/my_bedroom_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_bedroom_photo/my_bedroom_photo.json",
       "tier": "photo",
@@ -182,15 +207,20 @@
       "floor_area_m2": 4.739,
       "ceiling_height_m": 2.58,
       "n_openings": 1,
-      "n_damage": 5,
+      "n_damage": 3,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%)."
     },
     {
       "label": "my_bedroom_video",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_bedroom --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_bedroom --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_video",
       "ok": true,
-      "elapsed_s": 1.1,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video/my_bedroom_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_bedroom_video/my_bedroom_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
+      "elapsed_s": 1.14,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_video/my_bedroom_video.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_video/my_bedroom_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_bedroom_video/my_bedroom_video.json",
       "tier": "video",
@@ -205,15 +235,76 @@
       "floor_area_m2": 4.739,
       "ceiling_height_m": 2.58,
       "n_openings": 1,
-      "n_damage": 5,
+      "n_damage": 3,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
+      "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
+    },
+    {
+      "label": "my_bedroom_repeat_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_bedroom_repeat --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_photo",
+      "ok": true,
+      "elapsed_s": 0.79,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_photo/my_bedroom_repeat_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_photo/my_bedroom_repeat_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=16 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/my_bedroom_repeat_photo/my_bedroom_repeat_photo.json",
+      "tier": "photo",
+      "capture_id": "my_bedroom_repeat",
+      "n_walls": 4,
+      "wall_lengths_m": [
+        2.43,
+        1.95,
+        2.43,
+        1.95
+      ],
+      "floor_area_m2": 4.739,
+      "ceiling_height_m": 2.58,
+      "n_openings": 1,
+      "n_damage": 3,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
+      "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=16 dir=photos. Wall CIs use tier calibration (\u00b18%)."
+    },
+    {
+      "label": "my_bedroom_repeat_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_bedroom_repeat --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_video",
+      "ok": true,
+      "elapsed_s": 1.08,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_video/my_bedroom_repeat_video.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_bedroom_repeat_video/my_bedroom_repeat_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/my_bedroom_repeat_video/my_bedroom_repeat_video.json",
+      "tier": "video",
+      "capture_id": "my_bedroom_repeat",
+      "n_walls": 4,
+      "wall_lengths_m": [
+        2.43,
+        1.95,
+        2.43,
+        1.95
+      ],
+      "floor_area_m2": 4.739,
+      "ceiling_height_m": 2.58,
+      "n_openings": 1,
+      "n_damage": 3,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
     },
     {
       "label": "my_kitchen_photo",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_kitchen --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_kitchen --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_photo",
       "ok": true,
-      "elapsed_s": 0.77,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_photo/my_kitchen_photo.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_photo/my_kitchen_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "elapsed_s": 0.81,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_photo/my_kitchen_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_photo/my_kitchen_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_kitchen_photo/my_kitchen_photo.json",
       "tier": "photo",
@@ -228,15 +319,19 @@
       "floor_area_m2": 3.735,
       "ceiling_height_m": 2.58,
       "n_openings": 1,
-      "n_damage": 5,
+      "n_damage": 2,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=12 dir=photos. Wall CIs use tier calibration (\u00b18%)."
     },
     {
       "label": "my_kitchen_video",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --input samples/my_kitchen --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_video",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_kitchen --tier video --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_video",
       "ok": true,
-      "elapsed_s": 1.02,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_video/my_kitchen_video.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/my_kitchen_video/my_kitchen_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
+      "elapsed_s": 1.05,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_video/my_kitchen_video.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_kitchen_video/my_kitchen_video_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%).\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/my_kitchen_video/my_kitchen_video.json",
       "tier": "video",
@@ -251,15 +346,48 @@
       "floor_area_m2": 3.735,
       "ceiling_height_m": 2.58,
       "n_openings": 1,
-      "n_damage": 5,
+      "n_damage": 3,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
       "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; video=video.mp4 extracted_frames=16. Wall CIs use tier calibration (\u00b13%)."
     },
     {
-      "label": "stitch_photo_drift_on",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on",
+      "label": "my_room_damage_photo",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --input samples/my_room_damage --tier photo --no-colmap --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_damage_photo",
       "ok": true,
-      "elapsed_s": 0.76,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_my_kitchen_photo_on.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_my_kitchen_photo_drift_on_plan.png\nnotes: my_room-my_bedroom: opening_aligned shared_width\u22480.88m on south/north; my_room-my_kitchen: opening_aligned shared_width\u22480.77m on west/east; ablation_pair=use --drift-align off/on; tier=photo\n",
+      "elapsed_s": 0.84,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_damage_photo/my_room_damage_photo.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/my_room_damage_photo/my_room_damage_photo_plan.png\nnotes: method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=5 dir=photos. Wall CIs use tier calibration (\u00b18%).\n",
+      "stderr_tail": "",
+      "json_path": "benchmark/runs/my_room_damage_photo/my_room_damage_photo.json",
+      "tier": "photo",
+      "capture_id": "my_room_damage",
+      "n_walls": 4,
+      "wall_lengths_m": [
+        4.82,
+        2.42,
+        4.82,
+        2.42
+      ],
+      "floor_area_m2": 11.664,
+      "ceiling_height_m": 2.58,
+      "n_openings": 3,
+      "n_damage": 4,
+      "damage_classes": [
+        "concealed_moisture_risk",
+        "surface_crack",
+        "water_stain"
+      ],
+      "notes": "method=ref_rectangle; scale_source=gt_length+gt_width; photo_count=5 dir=photos. Wall CIs use tier calibration (\u00b18%)."
+    },
+    {
+      "label": "stitch_photo_drift_on",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_on",
+      "ok": true,
+      "elapsed_s": 0.83,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_my_kitchen_photo_on.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_my_kitchen_photo_drift_on_plan.png\nnotes: my_room-my_bedroom: opening_aligned shared_width\u22480.88m on south/north; my_room-my_kitchen: opening_aligned shared_width\u22480.77m on west/east; ablation_pair=use --drift-align off/on; tier=photo\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stitch_photo_drift_on/stitched_my_room_my_bedroom_my_kitchen_photo_on.json",
       "tier": "photo",
@@ -283,10 +411,10 @@
     },
     {
       "label": "stitch_photo_drift_off",
-      "cmd": "/Users/ubaidahmed/Documents/personal/assignment/.venv/bin/python /Users/ubaidahmed/Documents/personal/assignment/run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align off --out /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off",
+      "cmd": "/Users/ubaidahmed/Documents/personal/floorPlanner/.venv/bin/python /Users/ubaidahmed/Documents/personal/floorPlanner/run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align off --out /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_off",
       "ok": true,
-      "elapsed_s": 0.76,
-      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_my_kitchen_photo_off.json\nwrote /Users/ubaidahmed/Documents/personal/assignment/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_my_kitchen_photo_drift_off_plan.png\nnotes: my_room-my_bedroom: no opening alignment (ablation) on south/north; my_room-my_kitchen: no opening alignment (ablation) on west/east; ablation_pair=use --drift-align off/on; tier=photo\n",
+      "elapsed_s": 0.85,
+      "stdout_tail": "wrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_my_kitchen_photo_off.json\nwrote /Users/ubaidahmed/Documents/personal/floorPlanner/benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_my_kitchen_photo_drift_off_plan.png\nnotes: my_room-my_bedroom: no opening alignment (ablation) on south/north; my_room-my_kitchen: no opening alignment (ablation) on west/east; ablation_pair=use --drift-align off/on; tier=photo\n",
       "stderr_tail": "",
       "json_path": "benchmark/runs/stitch_photo_drift_off/stitched_my_room_my_bedroom_my_kitchen_photo_off.json",
       "tier": "photo",

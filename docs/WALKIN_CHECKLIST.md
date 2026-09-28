@@ -43,11 +43,12 @@ python run.py --input /path/to/photos_or_video_dir --tier photo --out out/walkin
 
 ## Talking points if numbers look off
 - Ceiling missing → walk was eye-level; notes say prior/rough CI (not a fake 0).
-- `*_large` tag / low_confidence → doorway bleed / multi-space; intervals widened.
+- `wall_method=manhattan_rect` / `low_confidence=False` → expected good path (round-2 density-peak).
+- `*_large` tag / low_confidence → doorway bleed / multi-space; intervals widened (polar/hull fallback).
 - Openings noisy → density gaps; do not oversell ±2 cm.
 - Fix-loop story ready: hull → polar rect → Manhattan density-peak rect (`fix_loop/DECLARATION.md`).
 
 ## Do not
 - Edit code during the scored cold run.
 - Point at `my_room` GT as if it were the walk-in answer.
-- Claim multi-room stitch (not shipped).
+- Oversell multi-room: stitch ships for GT/tape rectangles (`--stitch-gt`), not as independent multi-room LiDAR from a cold Stray walk.

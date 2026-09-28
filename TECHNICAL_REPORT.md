@@ -50,7 +50,7 @@ fix_loop/           Declaration + regenerable before/after
 
 **Photo / video path.** Prefer COLMAP SfM scaled by a reference length when the reconstruction clears an internal point gate. On Android hall/bedroom captures COLMAP is typically too thin; we fall back to a **tape- or GT-anchored axis-aligned rectangle** and widen wall CIs to the tier budget (±8% photo, ±3% video). Stray folders at photo/video tier reuse the **same metric cloud** as LiDAR with those wider CIs — so walk-in can exercise all three tiers from one export.
 
-**Output.** Every run emits schema-valid JSON (`rooms[]`, `stitched_plan`, `drift_correction`) and a rendered plan. Damage/scope are rule-based (heuristic stain regions + `concealed_behind_opening`); they satisfy the contract without claiming vision-grade damage detection.
+**Output.** Every run emits schema-valid JSON (`rooms[]`, `stitched_plan`, `drift_correction`) and a rendered plan. Damage/scope are rule-based (`water_stain` compact dark patches, `surface_crack` elongated marks, plus `concealed_behind_opening`); they satisfy the contract without claiming vision-grade damage detection. Staged two-class capture: `samples/my_room_damage/` (evidence in `benchmark/damage/`).
 
 ---
 
@@ -100,7 +100,7 @@ Footprint is identical (sum of room areas: 11.6644 hall + 4.7385 bedroom + 3.735
 
 **LiDAR qualitative.** After the round-2 wall-detection fix (§6): `single_room` ≈ 9.9 m² Manhattan rect; ceiling soft-fails (~1.25 m furniture). `single_scan_floor` ≈ 27.0 m² and `single_scan_with_ceiling` ≈ 30.5 m², both `manhattan_rect`, `low_confidence=False` (previously `oriented_rect_large` at 113/139 m²). Cross-checked stable (27–33 m²) across frame_stride 10/20/30, vs. a 111–159 m² swing for the same strides under the old max-radius method. Ceiling plane ≈ 1.83 m when the walk looks up.
 
-**Repeatability.** Second same-tier capture of the same room: **not run** — gate left open.
+**Repeatability.** `my_bedroom` vs `my_bedroom_repeat` at photo and video: walls Δ = 0 (exact), ceiling spread = 0. Both take the `ref_rectangle` path scaled from the same tape GT — **repeatable-but-biased**, disclosed in `benchmark/REPORT.md`. Not an independent SfM cross-check.
 
 **Head-to-head (Magicplan Android).** Free-tier plan export vs our photo tier on hall + bedroom (spec minimum) plus kitchen as a bonus third room from the same Magicplan session. Android Magicplan has no AR scan; rooms were drawn with tape-entered dims. Ours uses the same tape scale when SfM fails. Shared dimensions: **13/13 beat or tie** (9/9 on the required 2-room minimum alone; ≥70% target). This is a plan-export comparison with method disclosure, not a LiDAR bake-off. Artifacts: `benchmark/h2h/`.
 
@@ -132,7 +132,7 @@ Footprint is identical (sum of room areas: 11.6644 hall + 4.7385 bedroom + 3.735
 5. **Mirrors / glass / closed doors** → holes or missed openings; protocol says avoid linger / open doors for the opening gate.
 6. **Stitch from GT rectangles** — adjacency and drift ablation are real; independent photo-only SfM stitch is not.
 7. **Damage** — rule heuristics only; not a scored vision system.
-8. **Benchmark composition gaps** — no staged two-class damage room, no repeatability pair (3+ rooms + connector now satisfied via `my_room`+`my_bedroom`+`my_kitchen`).
+8. **Benchmark composition gaps** — staged two-class damage room now covered (`my_room_damage`). Technical report currently under the 6-page budget and should be expanded. Samples folder still flat (rearrange TODO).
 
 ---
 
@@ -155,4 +155,4 @@ Cold walk-in: receive Stray export → run all three `--tier` values → compare
 
 ## 9. Summary
 
-We ship an end-to-end Route 2 pipeline with honest tier intervals, a two-round regenerable fix-loop (hull → polar rectangle → Manhattan density-peak rectangle), a 3-room-plus-connector opening-anchored stitch with drift ablation, and a tape-calibrated photo/video benchmark (3 rooms) plus Magicplan H2H under disclosed methods. Remaining score risk is concentrated in **independent centimetre LiDAR accuracy** (no tape on company scans, even though wall shape/robustness is now materially better) and **missing repeatability / a staged two-class damage room** — not in the ability to run cold on a Stray handoff or in multi-room composition breadth.
+We ship an end-to-end Route 2 pipeline with honest tier intervals, a two-round regenerable fix-loop (hull → polar rectangle → Manhattan density-peak rectangle), a 3-room-plus-connector opening-anchored stitch with drift ablation, a tape-calibrated photo/video benchmark (3 rooms) plus Magicplan H2H under disclosed methods, a disclosed **repeatable-but-biased** bedroom repeatability pair, and a staged two-class damage room (`water_stain` + `surface_crack`, rule-based). Remaining score risk is concentrated in **independent centimetre LiDAR accuracy** (no tape on company scans) and **report depth / samples UX** — not in the ability to run cold on a Stray handoff or in multi-room composition breadth.

@@ -63,8 +63,7 @@ python run.py --input /path/to/stray_export --tier video --out out/walkin
 python run.py --input /path/to/stray_export --tier photo --out out/walkin
 ```
 
-Defense checklist: [docs/WALKIN_CHECKLIST.md](docs/WALKIN_CHECKLIST.md)  
-Capture protocol: [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md)
+Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).
 
 ## Multi-room stitch (GT rectangles; needs author `samples/local/` or just browse committed stitch JSON)
 
@@ -80,8 +79,7 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 ## Docs
 - [samples/README.md](samples/README.md) — **drop zones, privacy, how to add a capture**
 - [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) — ≤6-page technical report
-- [docs/WALKIN_CHECKLIST.md](docs/WALKIN_CHECKLIST.md) — 30% walk-in
-- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix
+- [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix (follow at walk-in)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
 - [benchmark/REPORT.md](benchmark/REPORT.md) — gate/timing tables (`python benchmark/run_benchmark.py`)
 - [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — vs Magicplan

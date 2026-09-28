@@ -22,7 +22,8 @@ samples/**
 !samples/stray/*/README.md
 !samples/local/*/README.md
 
-# Working notes / process docs
+# Working notes / process docs (local only — not for GitHub)
 memory.md
 NOTES.md
 TODO.md
+docs/WALKIN_CHECKLIST.md

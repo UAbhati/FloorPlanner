@@ -141,8 +141,7 @@ Footprint is identical (sum of room areas: 11.6644 hall + 4.7385 bedroom + 3.735
 | Deliverable | Location |
 |-------------|----------|
 | One-command CLI | `README.md`, `run.py` |
-| Capture protocol + device matrix | `docs/CAPTURE_PROTOCOL.md` |
-| Walk-in checklist | `docs/WALKIN_CHECKLIST.md` |
+| Capture protocol + device matrix | `docs/CAPTURE_PROTOCOL.md` (walk-in follows this) |
 | Benchmark tables | `benchmark/REPORT.md` ← `run_benchmark.py` |
 | Ground truth | `benchmark/ground_truth.csv` |
 | Head-to-head | `benchmark/HEAD_TO_HEAD.md`, `benchmark/h2h/` |

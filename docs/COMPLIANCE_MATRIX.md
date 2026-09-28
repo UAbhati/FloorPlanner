@@ -4,7 +4,7 @@
 |-------------|-----------------|--------|
 | Route 2 stock capture protocol | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) | Done |
 | Device matrix | CAPTURE_PROTOCOL.md | Done |
-| Walk-in cold-run checklist | [WALKIN_CHECKLIST.md](WALKIN_CHECKLIST.md) | Done |
+| Walk-in cold run | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) + `run.py` | Done — protocol is the scored page; personal defense cheat-sheet kept local (not shipped) |
 | LiDAR / photo / video CLI | `run.py` | Done (Stray folder → all 3 tiers) |
 | One command per capture | `run.py` | Done |
 | Schema JSON + plan PNG + CIs | `schema/output.schema.json` | Done |

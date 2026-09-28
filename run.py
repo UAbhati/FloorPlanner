@@ -65,11 +65,13 @@ from reconstruction.validation import (  # noqa: E402
     compare_output_jsons,
     extract_scale_from_lidar_json,
     load_output_json,
+    render_comparison_figure,
 )
 
-# Default frames extracted from video for COLMAP photo/video tiers.
-# Long videos auto-raise via choose_frame_count (≤1.5s spacing, cap 300).
-DEFAULT_COLMAP_FRAMES = 150
+# Default frames for COLMAP on short clips (~≤60s). Longer videos auto-raise
+# via choose_frame_count (≤1.5s spacing, cap 300). Keep 100 for short rooms —
+# denser extracts can register a different/weaker subset and inflate aspect error.
+DEFAULT_COLMAP_FRAMES = 100
 
 SCHEMA_PATH = REPO_ROOT / "schema" / "output.schema.json"
 GT_PATH = REPO_ROOT / "benchmark" / "ground_truth.csv"
@@ -565,12 +567,16 @@ def main() -> None:
         except FileNotFoundError as exc:
             raise SystemExit(str(exc)) from exc
         comparison = compare_output_jsons(golden, candidate)
-        out_path = Path(args.out) if args.out else Path("out") / "comparison.json"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(out_path, "w") as f:
+        out_dir = Path(args.out) if args.out else Path("out")
+        out_dir.mkdir(parents=True, exist_ok=True)
+        json_path = out_dir / "comparison.json"
+        plot_path = out_dir / "comparison.png"
+        with open(json_path, "w") as f:
             json.dump(comparison, f, indent=2)
+        render_comparison_figure(golden, candidate, comparison, plot_path)
         status = "PASS" if comparison.get("overall_pass") else "FAIL"
-        print(f"comparison: {status} → {out_path}")
+        print(f"comparison: {status} → {json_path}")
+        print(f"comparison plot → {plot_path}")
         ac = comparison.get("area_comparison") or {}
         if ac:
             print(

@@ -8,13 +8,17 @@ Compare LiDAR golden JSON against photo/video COLMAP output from RGB-only sample
 # Golden
 python run.py --input samples/stray/single_room --tier lidar
 
-# COLMAP on RGB video (default --colmap-frames 150; long videos auto-raise)
+# COLMAP on RGB video (default --colmap-frames 100; long videos auto-raise)
 python run.py --input samples/stray/single_room_rgb --tier video \
   --ref-from out/single_room/
 
-# Compare (writes out/comparison.json; exit 0 on PASS)
+# Compare → out/comparison.json + out/comparison.png
 python run.py --compare out/single_room/ out/single_room_rgb/
 ```
+
+**Note:** Area/wall error is sensitive to the extracted frame set. Prefer the
+default 100 frames for short Stray clips; bump only for long walks. Accuracy
+tuning is deferred — core path (LiDAR golden, RGB COLMAP, compare) is complete.
 
 ## Pass criteria
 

@@ -284,3 +284,93 @@ def compare_with_ceiling(
         "note": "validation soft gate ±15 cm (not assignment LiDAR gate)",
     }
     return out
+
+
+def _polygon_xy(output: dict) -> np.ndarray:
+    room0 = (output.get("rooms") or [{}])[0]
+    poly = np.array(room0.get("polygon") or [], dtype=float)
+    if len(poly) == 0:
+        return np.zeros((0, 2))
+    return poly
+
+
+def _center_polygon(poly: np.ndarray) -> np.ndarray:
+    if len(poly) == 0:
+        return poly
+    return poly - poly.mean(axis=0)
+
+
+def render_comparison_figure(
+    golden: dict,
+    candidate: dict,
+    comparison: dict[str, Any],
+    out_path: str | Path,
+) -> Path:
+    """Side-by-side plans + wall-length bar chart for ``--compare`` output."""
+    import matplotlib.pyplot as plt
+
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+
+    status = "PASS" if comparison.get("overall_pass") else "FAIL"
+    g_name = f"{golden.get('capture_id', 'golden')} ({golden.get('tier', '?')})"
+    c_name = f"{candidate.get('capture_id', 'candidate')} ({candidate.get('tier', '?')})"
+
+    fig, axes = plt.subplots(1, 3, figsize=(14, 4.5))
+
+    for ax, data, name, color in (
+        (axes[0], golden, g_name, "#1f4e79"),
+        (axes[1], candidate, c_name, "#c45c26"),
+    ):
+        poly = _center_polygon(_polygon_xy(data))
+        if len(poly):
+            closed = np.vstack([poly, poly[0]])
+            ax.plot(closed[:, 0], closed[:, 1], "-", color=color, linewidth=2)
+            ax.fill(closed[:, 0], closed[:, 1], color=color, alpha=0.12)
+        area = (data.get("rooms") or [{}])[0].get("floor_area", {}).get("value_m")
+        title = name
+        if area is not None:
+            title += f"\narea {float(area):.2f} m²"
+        ax.set_title(title, fontsize=10)
+        ax.set_aspect("equal")
+        ax.set_xlabel("u (m)")
+        ax.set_ylabel("v (m)")
+        ax.grid(True, alpha=0.25)
+
+    ax = axes[2]
+    walls = comparison.get("wall_comparison") or []
+    if walls:
+        ranks = [w["rank"] for w in walls]
+        lidar = [w["length_lidar_m"] for w in walls]
+        colmap = [w["length_colmap_m"] for w in walls]
+        x = np.arange(len(ranks))
+        width = 0.35
+        ax.bar(x - width / 2, lidar, width, label="LiDAR", color="#1f4e79")
+        ax.bar(x + width / 2, colmap, width, label="COLMAP", color="#c45c26")
+        ax.set_xticks(x)
+        ax.set_xticklabels([f"rank{r}" for r in ranks])
+        ax.set_ylabel("length (m)")
+        ax.legend(fontsize=8)
+        for i, w in enumerate(walls):
+            ax.annotate(
+                f"{w['error_percent']:.1f}%",
+                (x[i], max(w["length_lidar_m"], w["length_colmap_m"])),
+                textcoords="offset points",
+                xytext=(0, 4),
+                ha="center",
+                fontsize=7,
+                color="green" if w.get("pass") else "red",
+            )
+    else:
+        ax.text(0.5, 0.5, "no wall comparison", ha="center", va="center", transform=ax.transAxes)
+    ac = comparison.get("area_comparison") or {}
+    area_err = ac.get("error_percent")
+    area_note = f"area err {area_err:.1f}%" if area_err is not None else "area n/a"
+    ax.set_title(f"Wall lengths — {status}\n{area_note}", fontsize=10)
+    ax.grid(True, axis="y", alpha=0.25)
+
+    fig.suptitle(f"COLMAP vs LiDAR comparison: {status}", fontsize=12, fontweight="bold")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=140)
+    plt.close(fig)
+    return out_path

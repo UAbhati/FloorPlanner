@@ -1,17 +1,12 @@
-"""Ground-truth helpers and a metric rectangle layout for photo/video tiers.
+"""Ground-truth helpers and an explicit GT-rectangle layout for ablations.
 
-Photo/video on Android have no depth/poses. Until COLMAP+metric scale is
-reliable, the photo/video path builds an axis-aligned rectangle from:
+Photo/video production path uses COLMAP SfM scaled by one reference length
+(``--ref-length-m``, ``--ref-from`` LiDAR JSON, or ``benchmark/ground_truth.csv``
+length). GT is a *scale reference* (and opening enrichment), not a silent
+fallback when SfM fails.
 
-1. `--ref-length-m` / `--ref-width-m` CLI overrides, or
-2. `benchmark/ground_truth.csv` rows for this room_id (development / demo),
-
-and attaches the tier's calibrated interval widths (photo ±8%, video ±3%).
-
-This is an honest "thin sensor" path: intervals are wide, method is disclosed
-in drift_correction.notes, and LiDAR remains the centimetre path. Walk-in
-photo/video should pass `--ref-length-m` and `--ref-width-m` from a quick
-tape of the two spans if SfM is unavailable (protocol documents this).
+``rectangle_room`` remains for ``--no-colmap`` benchmark ablations and for
+stitching GT rooms (``--stitch-gt``).
 """
 from __future__ import annotations
 

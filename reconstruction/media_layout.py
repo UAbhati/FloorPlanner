@@ -116,11 +116,21 @@ def rectangle_room(
         for wid, items in by_wall.items():
             wall = next(w for w in walls if w.id == wid)
             n = len(items)
-            for i, (width, _notes) in enumerate(items):
-                # Evenly space openings along the wall with margin from corners.
-                slot = (i + 1) / (n + 1)
-                center = wall.length_m * slot
-                pos = max(0.05, min(center - width / 2, wall.length_m - width - 0.05))
+            for i, (width, notes) in enumerate(items):
+                # Try to parse position from notes (from_left_m, from_right_m, from_bottom_m, etc.)
+                pos = None
+                import re
+                # Look for from_XXX_m=X in notes
+                match = re.search(r'from_(?:left|right|bottom)_m[=\s]+([0-9.]+)', notes)
+                if match:
+                    pos = float(match.group(1))
+
+                if pos is None:
+                    # Evenly space openings along the wall with margin from corners.
+                    slot = (i + 1) / (n + 1)
+                    center = wall.length_m * slot
+                    pos = max(0.05, min(center - width / 2, wall.length_m - width - 0.05))
+
                 opening_objs.append(
                     Opening(id=f"{wid}_opening_{i}", wall_id=wid, position_on_wall_m=pos, width_m=width)
                 )

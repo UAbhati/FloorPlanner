@@ -2,7 +2,7 @@
   "capture_id": "my_bedroom",
   "tier": "video",
   "device": "Android/iPhone handheld (native camera)",
-  "generated_at": "2026-09-27T12:49:22.663775+00:00",
+  "generated_at": "2026-09-28T12:03:29.231407+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -106,7 +106,7 @@
             "ci_high_m": 0.96,
             "confidence_level": 0.95
           },
-          "position_on_wall_m": 0.7750000000000001
+          "position_on_wall_m": 1.55
         }
       ],
       "ceiling_height": {
@@ -123,56 +123,36 @@
       },
       "damage_regions": [
         {
-          "id": "damage_stain_0_1",
+          "id": "damage_stain_0_2",
           "surface_id": "wall_0",
           "class": "water_stain",
           "extent_m2": {
-            "value_m": 1.4779292399339359,
-            "ci_low_m": 0.7389646199669679,
-            "ci_high_m": 2.216893859900904,
+            "value_m": 0.07152704909161918,
+            "ci_low_m": 0.021527049091619177,
+            "ci_high_m": 0.12152704909161918,
             "confidence_level": 0.95
           },
           "concealed_flag": false,
           "concealed_rule": null
         },
         {
-          "id": "damage_stain_1_1",
-          "surface_id": "wall_1",
-          "class": "water_stain",
+          "id": "damage_crack_4_2",
+          "surface_id": "wall_0",
+          "class": "surface_crack",
           "extent_m2": {
-            "value_m": 0.358101081775448,
-            "ci_low_m": 0.179050540887724,
-            "ci_high_m": 0.5371516226631721,
+            "value_m": 0.05539217300878501,
+            "ci_low_m": 0.027696086504392505,
+            "ci_high_m": 0.08308825951317751,
             "confidence_level": 0.95
           },
           "concealed_flag": false,
-          "concealed_rule": null
-        },
-        {
-          "id": "damage_stain_2_2",
-          "surface_id": "wall_2",
-          "class": "water_stain",
-          "extent_m2": {
-            "value_m": 0.16427082500082343,
-            "ci_low_m": 0.08213541250041172,
-            "ci_high_m": 0.24640623750123514,
+          "concealed_rule": null,
+          "length_m": {
+            "value_m": 0.6182212581344902,
+            "ci_low_m": 0.3709327548806941,
+            "ci_high_m": 0.8655097613882864,
             "confidence_level": 0.95
-          },
-          "concealed_flag": false,
-          "concealed_rule": null
-        },
-        {
-          "id": "damage_stain_3_2",
-          "surface_id": "wall_3",
-          "class": "water_stain",
-          "extent_m2": {
-            "value_m": 0.038622065584106975,
-            "ci_low_m": 0.0,
-            "ci_high_m": 0.08862206558410698,
-            "confidence_level": 0.95
-          },
-          "concealed_flag": false,
-          "concealed_rule": null
+          }
         },
         {
           "id": "damage_concealed_wall_2_opening_0",
@@ -190,36 +170,20 @@
       ],
       "scope_line_items": [
         {
-          "id": "scope_damage_stain_0_1",
+          "id": "scope_damage_stain_0_2",
           "surface_id": "wall_0",
-          "damage_region_id": "damage_stain_0_1",
+          "damage_region_id": "damage_stain_0_2",
           "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
-          "quantity": 1.478,
+          "quantity": 0.072,
           "unit": "m2"
         },
         {
-          "id": "scope_damage_stain_1_1",
-          "surface_id": "wall_1",
-          "damage_region_id": "damage_stain_1_1",
-          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
-          "quantity": 0.358,
-          "unit": "m2"
-        },
-        {
-          "id": "scope_damage_stain_2_2",
-          "surface_id": "wall_2",
-          "damage_region_id": "damage_stain_2_2",
-          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
-          "quantity": 0.164,
-          "unit": "m2"
-        },
-        {
-          "id": "scope_damage_stain_3_2",
-          "surface_id": "wall_3",
-          "damage_region_id": "damage_stain_3_2",
-          "description": "Inspect and treat dark wall patch (rule: stain_dark_patch)",
-          "quantity": 0.039,
-          "unit": "m2"
+          "id": "scope_damage_crack_4_2",
+          "surface_id": "wall_0",
+          "damage_region_id": "damage_crack_4_2",
+          "description": "Inspect elongated surface mark / crack (rule: crack_elongated_mark)",
+          "quantity": 0.618,
+          "unit": "m"
         },
         {
           "id": "scope_damage_concealed_wall_2_opening_0",

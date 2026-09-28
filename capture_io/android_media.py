@@ -59,13 +59,13 @@ def choose_frame_count(duration_s: float, max_frames: int) -> int:
     """Pick how many frames to extract for COLMAP.
 
     ``max_frames`` is a soft target. For long walks, raise the count so spacing
-    stays ≤ ~1.5s (sequential matcher needs overlap). Hard cap 300.
+    stays ≤ ~1.0s (sequential matcher needs overlap). Hard cap 300.
     """
     if duration_s <= 0:
         return max(3, max_frames)
     if duration_s <= 60:
         return max(3, max_frames)
-    min_for_overlap = int(math.ceil(duration_s / 1.5))
+    min_for_overlap = int(math.ceil(duration_s / 1.0))
     return max(3, min(300, max(max_frames, min_for_overlap)))
 
 

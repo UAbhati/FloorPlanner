@@ -281,60 +281,12 @@ def _pca_up_axis(points: np.ndarray) -> np.ndarray:
 
 
 def _fit_sparse_up_and_band(points: np.ndarray) -> tuple[np.ndarray, np.ndarray, float | None, str, list[str]]:
-    """Up-axis + wall band for sparse SfM clouds (softer than LiDAR plane gates).
+    """Up-axis + wall band for sparse SfM clouds.
 
-    Tries RANSAC floor with a low inlier floor, then PCA percentile band.
-    Returns (up, wall_band, ceiling_height_unscaled, ceiling_source, notes).
+    Deterministic PCA-up + percentile band. Open3D RANSAC floor was jittery on
+    ~1k-point clouds and swung short-wall error across the ±5% gate run-to-run.
     """
-    import open3d as o3d
-
-    notes: list[str] = []
-    min_inliers = max(80, len(points) // 15)
-    dist_thresh = 0.03  # slightly looser than LiDAR 2cm — SfM noise
-
-    o3d.utility.random.seed(42)
-    pcd = o3d.geometry.PointCloud()
-    pcd.points = o3d.utility.Vector3dVector(points)
-    try:
-        plane_model, inlier_idx = pcd.segment_plane(
-            distance_threshold=dist_thresh, ransac_n=3, num_iterations=2000
-        )
-    except Exception as exc:  # noqa: BLE001
-        notes.append(f"ransac_failed={exc}")
-        inlier_idx = []
-        plane_model = None
-
-    if plane_model is not None and len(inlier_idx) >= min_inliers:
-        a, b, c, d = plane_model
-        normal = np.array([a, b, c], dtype=float)
-        normal = normal / np.linalg.norm(normal)
-        offset = -d / np.linalg.norm([a, b, c])
-        heights = points @ normal
-        above = np.sum(heights > offset)
-        below = np.sum(heights < offset)
-        up = normal if above >= below else -normal
-        floor_off = float(np.dot(normal, up) * offset)
-        h = points @ up
-        ceil_off = float(np.percentile(h[h > floor_off], 95)) if np.any(h > floor_off) else float(np.percentile(h, 95))
-        ceiling_h = abs(ceil_off - floor_off)
-        notes.append(f"sparse_floor_inliers={len(inlier_idx)}")
-        if ceiling_h < 0.25:
-            # Degenerate vertical extent (flat SfM patch) — use all points in 2D.
-            notes.append(f"flat_cloud_h={ceiling_h:.3f};use_all_points")
-            return up, points, None, "none", notes
-        lo = floor_off + 0.10 * ceiling_h
-        hi = floor_off + 0.90 * ceiling_h
-        wall_band = points[(h >= lo) & (h <= hi)]
-        if len(wall_band) < 30:
-            # Widen band if mid-slice is empty.
-            wall_band = points[(h >= floor_off) & (h <= ceil_off)]
-            notes.append("widened_wall_band")
-        return up, wall_band, ceiling_h, "rough", notes
-
-    notes.append(
-        f"sparse_floor_weak={len(inlier_idx) if plane_model is not None else 0}"
-        f"<{min_inliers};pca_up"
-    )
+    notes: list[str] = ["sparse_pca_up"]
     up = _pca_up_axis(points)
     heights = points @ up
     floor_off = float(np.percentile(heights, 10))
@@ -346,6 +298,9 @@ def _fit_sparse_up_and_band(points: np.ndarray) -> tuple[np.ndarray, np.ndarray,
     lo = floor_off + 0.10 * (ceil_off - floor_off)
     hi = ceil_off - 0.10 * (ceil_off - floor_off)
     wall_band = points[(heights >= lo) & (heights <= hi)]
+    if len(wall_band) < 30:
+        wall_band = points[(heights >= floor_off) & (heights <= ceil_off)]
+        notes.append("widened_wall_band")
     return up, wall_band, ceiling_h, "rough", notes
 
 
@@ -407,8 +362,34 @@ def reconstruct_metric_room(
     if len(wall_band) < 25:
         raise SfMError(f"wall band too thin ({len(wall_band)} points)")
 
-    pts2d = project_to_horizontal(wall_band, up)
-    room = build_room_polygon(pts2d)
+    # Sparse SfM: Manhattan density-peak (LiDAR-tuned) often shrinks the short
+    # axis. Prefer polar oriented-rect. Try mid-height wall band and full cloud;
+    # after normalizing longest wall to 1, keep the larger short axis (outer
+    # envelope). Comparing raw areas is misleading because SfM scale varies.
+    if len(points) < 2000:
+        candidates: list = []
+        for label, cloud in (("band", wall_band), ("all", points)):
+            if len(cloud) < 25:
+                continue
+            pts2d = project_to_horizontal(cloud, up)
+            try:
+                cand = build_room_polygon(pts2d, method="polar")
+            except ValueError:
+                cand = build_room_polygon(pts2d, method="auto")
+            lens = sorted((w.length_m for w in cand.walls), reverse=True)
+            if not lens or lens[0] < 1e-6:
+                continue
+            # short/long after normalizing long → 1
+            aspect = lens[min(2, len(lens) - 1)] / lens[0]
+            candidates.append((aspect, label, cand))
+        if not candidates:
+            raise SfMError("sparse room polygon fit failed")
+        candidates.sort(reverse=True)
+        aspect, src, room = candidates[0]
+        notes.append(f"sparse_rect={room.method}/{src};aspect={aspect:.3f}")
+    else:
+        pts2d = project_to_horizontal(wall_band, up)
+        room = build_room_polygon(pts2d)
     lengths = sorted((w.length_m for w in room.walls), reverse=True)
     long_wall = lengths[0] if lengths else 0.0
     if long_wall < 1e-3:

@@ -1,10 +1,10 @@
 {
   "capture_id": "single_room",
-  "tier": "video",
-  "num_frames": 100,
+  "tier": "lidar",
+  "num_frames": null,
   "colmap_success": true,
   "colmap_error": null,
-  "colmap_notes": "colmap_points=1605; plane_fit_failed=best plane only had 287 inliers, need >= 500; sparse_pca_up; ceiling_rejected=1.52m; scale=2.5869 ref_length_m=3.6446866385735275",
+  "colmap_notes": null,
   "pass_criteria": {
     "wall_error_frac": 0.05,
     "area_error_frac": 0.1,
@@ -22,57 +22,58 @@
     {
       "rank": 1,
       "length_lidar_m": 3.644686638573527,
-      "length_colmap_m": 3.6446866385735275,
-      "difference_m": 4.440892098500626e-16,
-      "error_percent": 1.218456492665367e-14,
+      "length_colmap_m": 3.644686513642596,
+      "difference_m": 1.2493093093368657e-07,
+      "error_percent": 3.4277550671018064e-06,
       "pass": true
     },
     {
       "rank": 2,
       "length_lidar_m": 2.718424700597193,
-      "length_colmap_m": 2.956217725251279,
-      "difference_m": 0.23779302465408625,
-      "error_percent": 8.74745673852386,
-      "pass": false
+      "length_colmap_m": 2.794058825899438,
+      "difference_m": 0.075634125302245,
+      "error_percent": 2.7822777392226254,
+      "pass": true
     },
     {
       "rank": 3,
       "length_lidar_m": 2.718424700597193,
-      "length_colmap_m": 2.9562177252512787,
-      "difference_m": 0.2377930246540858,
-      "error_percent": 8.747456738523846,
-      "pass": false
+      "length_colmap_m": 2.7940587909913748,
+      "difference_m": 0.0756340903941819,
+      "error_percent": 2.782276455094244,
+      "pass": true
     }
   ],
   "area_comparison": {
     "area_lidar_m2": 9.907806184234833,
-    "area_colmap_m2": 10.774487243937566,
-    "difference_m2": 0.8666810597027332,
-    "error_percent": 8.747456738523857,
+    "area_colmap_m2": 10.183468631997457,
+    "difference_m2": 0.27566244776262394,
+    "error_percent": 2.7822753355960304,
     "pass": true
   },
   "shape_comparison": {
     "num_walls_lidar": 4,
     "num_walls_colmap": 4,
     "topology_match": true,
-    "colmap_method": "colmap_manhattan_rect",
-    "colmap_low_confidence": true
+    "colmap_method": "video",
+    "colmap_low_confidence": false
   },
   "opening_comparison": {
     "count_lidar": 0,
-    "count_colmap": 0,
-    "difference": 0,
-    "pass": true
+    "count_colmap": 3,
+    "difference": 3,
+    "pass": false
   },
   "ceiling_comparison": {
     "ceiling_lidar_m": 2.5,
-    "ceiling_colmap_m": null,
-    "pass": false,
-    "note": "COLMAP did not estimate ceiling"
+    "ceiling_colmap_m": 2.5,
+    "difference_m": 0.0,
+    "pass": true,
+    "note": "validation soft gate \u00b115 cm (not assignment LiDAR gate)"
   },
-  "overall_pass": false,
-  "ref_length_m": 3.6446866385735275,
-  "video": "rgb.mp4",
-  "colmap_frames_requested": 100,
-  "matcher": "sequential"
+  "overall_pass": true,
+  "golden_capture_id": "single_room",
+  "golden_tier": "lidar",
+  "candidate_capture_id": "single_room_rgb",
+  "candidate_tier": "video"
 }

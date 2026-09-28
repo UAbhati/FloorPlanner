@@ -1,0 +1,79 @@
+{
+  "capture_id": "single_scan_with_ceiling",
+  "tier": "lidar",
+  "num_frames": null,
+  "colmap_success": true,
+  "colmap_error": null,
+  "colmap_notes": null,
+  "pass_criteria": {
+    "wall_error_frac": 0.05,
+    "area_error_frac": 0.1,
+    "opening_count_tolerance": 1
+  },
+  "wall_comparison": [
+    {
+      "rank": 0,
+      "length_lidar_m": 5.92084360222627,
+      "length_colmap_m": 5.92084360222627,
+      "difference_m": 0.0,
+      "error_percent": 0.0,
+      "pass": true
+    },
+    {
+      "rank": 1,
+      "length_lidar_m": 5.92084360222627,
+      "length_colmap_m": 5.920843347069925,
+      "difference_m": 2.551563449415539e-07,
+      "error_percent": 4.309459294712898e-06,
+      "pass": true
+    },
+    {
+      "rank": 2,
+      "length_lidar_m": 5.150163779361849,
+      "length_colmap_m": 5.243958496904075,
+      "difference_m": 0.09379471754222646,
+      "error_percent": 1.8211987338749926,
+      "pass": true
+    },
+    {
+      "rank": 3,
+      "length_lidar_m": 5.150163779361849,
+      "length_colmap_m": 5.243958248419105,
+      "difference_m": 0.09379446905725608,
+      "error_percent": 1.8211939090775489,
+      "pass": true
+    }
+  ],
+  "area_comparison": {
+    "area_lidar_m2": 30.49331426345207,
+    "area_colmap_m2": 31.048656712099465,
+    "difference_m2": 0.5553424486473943,
+    "error_percent": 1.8211941275042152,
+    "pass": true
+  },
+  "shape_comparison": {
+    "num_walls_lidar": 4,
+    "num_walls_colmap": 4,
+    "topology_match": true,
+    "colmap_method": "video",
+    "colmap_low_confidence": false
+  },
+  "opening_comparison": {
+    "count_lidar": 3,
+    "count_colmap": 2,
+    "difference": 1,
+    "pass": true
+  },
+  "ceiling_comparison": {
+    "ceiling_lidar_m": 1.8343757608984845,
+    "ceiling_colmap_m": 2.5,
+    "difference_m": 0.6656242391015155,
+    "pass": false,
+    "note": "validation soft gate \u00b115 cm (not assignment LiDAR gate)"
+  },
+  "overall_pass": true,
+  "golden_capture_id": "single_scan_with_ceiling",
+  "golden_tier": "lidar",
+  "candidate_capture_id": "single_scan_with_ceiling_rgb",
+  "candidate_tier": "video"
+}

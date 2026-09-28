@@ -120,7 +120,7 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 ## Honest limits
 - LiDAR: Manhattan density-peak rectangle; falls back to polar then hull; `*_large` / low_confidence = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
-- Photo/video: COLMAP SfM (default 100 frames); fails honestly if reconstruction is thin — no silent GT-rectangle substitute (`--no-colmap` is ablation-only). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
-- COLMAP area/aspect is frame-set sensitive; short Stray clips can pass at 100 frames and regress at 150 — treat as tuning, not a settled gate.
+- Photo/video: COLMAP SfM (default 100 frames; long walks auto-raise to ≤1.0s spacing). Fails honestly if reconstruction is thin — no silent GT-rectangle substitute (`--no-colmap` is ablation-only). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
+- Stray RGB vs LiDAR golden (scaled): short-wall within ±5% on single_room / floor / ceiling with current sparse fit (PCA-up + polar aspect pick).
 - Multi-room stitch: GT hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
 - Author `samples/local/my_*` media is private; Stray media you already have — drop under `samples/stray/`.

@@ -1,8 +1,9 @@
 """Ground-truth helpers and an explicit GT-rectangle layout for ablations.
 
 Photo/video production path uses COLMAP SfM scaled by ``--ref-length-m`` or
-``--ref-from`` (LiDAR JSON). ``benchmark/ground_truth.csv`` is tape GT for
-validation / ``--stitch-gt`` demos — not a silent fallback when SfM fails.
+``--ref-from`` (LiDAR JSON) only — never a silent ``ground_truth.csv`` lookup
+by folder name. ``benchmark/ground_truth.csv`` is for ``--stitch-gt`` demos and
+offline evaluation scripts.
 
 ``rectangle_room`` builds axis-aligned rooms from those GT rows for stitch.
 """

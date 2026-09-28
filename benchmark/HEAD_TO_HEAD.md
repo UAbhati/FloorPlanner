@@ -1,10 +1,12 @@
 # Head-to-head vs Magicplan (Android)
 
+> **Part 3 status:** the brief asks for **LiDAR-tier output vs a consumer scanning app** on the same rooms. This document is **not that yet** — it is photo-tier vs Magicplan Android (useful engineering evidence). A LiDAR↔app bake-off still needs Pro captures of the same rooms.
+
 **App:** Magicplan (Android)
 **Export date:** 27 September 2026
 **Artifacts:** `benchmark/h2h/app_exports/` (hall + bedroom + kitchen screenshots, property overview, `magicplan_report.pdf`)
 
-**How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier on `my_room` / `my_bedroom` / `my_kitchen` also falls back to a tape-anchored rectangle when COLMAP is too thin. So this is **consumer plan export vs my photo output**, both tape-calibrated — not an independent LiDAR bake-off. Stating that up front so the score isn’t misleading.
+**How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier on these rooms needs `--ref-length-m` (tape) for scale when COLMAP runs; thin SfM fails closed (no silent GT rectangle). So this is **consumer plan export vs my photo output**, both tape-informed — not an independent LiDAR bake-off.
 
 ## Room A — Hall (`my_room`)
 
@@ -58,8 +60,8 @@ Magicplan app: Kitchen **3.74 m² (1.66 × 2.25)**. Mine: `benchmark/h2h/our_roo
 
 ```bash
 source .venv/bin/activate
-python run.py --input samples/local/my_room --tier photo --out benchmark/h2h/our_room_a
-python run.py --input samples/local/my_bedroom --tier photo --out benchmark/h2h/our_room_b
-python run.py --input samples/local/my_kitchen --tier photo --out benchmark/h2h/our_room_c
+python run.py --input samples/local/my_room --tier photo --ref-length-m 4.82 --ref-width-m 2.42 --out benchmark/h2h/our_room_a
+python run.py --input samples/local/my_bedroom --tier photo --ref-length-m 2.43 --ref-width-m 1.95 --out benchmark/h2h/our_room_b
+python run.py --input samples/local/my_kitchen --tier photo --ref-length-m 2.25 --ref-width-m 1.66 --out benchmark/h2h/our_room_c
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out benchmark/h2h/stitched
 ```

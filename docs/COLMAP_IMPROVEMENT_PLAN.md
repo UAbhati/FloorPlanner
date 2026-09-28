@@ -21,7 +21,7 @@ My own Android rooms (`my_room` / bedroom / kitchen) are still too thin for COLM
 
 ## If I pick this up again
 
-1. More stills per room (25–30 overlapping) and longer slow video walks.
+1. More stills per room (~8+ overlapping; denser if SfM stays thin) and longer slow video walks.
 2. Sequential / vocab-tree matching for video.
 3. Keep the honest thin-SfM fail — don’t quietly substitute GT.
 

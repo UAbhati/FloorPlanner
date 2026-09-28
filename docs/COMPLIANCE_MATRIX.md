@@ -2,25 +2,25 @@
 
 | Requirement | File / artifact | Status |
 |-------------|-----------------|--------|
-| Route 2 stock capture protocol | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) | Done |
-| Device matrix | CAPTURE_PROTOCOL.md | Done |
-| Walk-in cold run | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) + `run.py` | Done — protocol is the scored page; my personal defense cheat-sheet stays local (not shipped) |
+| Route 2 stock capture protocol | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) | Done — includes handoff steps |
+| Device matrix | CAPTURE_PROTOCOL.md | Done — assignment iPhone targets + Android tested disclosed |
+| Walk-in cold run | [CAPTURE_PROTOCOL.md](CAPTURE_PROTOCOL.md) + `run.py` | Done — protocol is the scored page |
 | LiDAR / photo / video CLI | `run.py` | Done (Stray folder → all 3 tiers) |
 | One command per capture | `run.py` | Done |
 | Schema JSON + plan PNG + CIs | `schema/output.schema.json` | Done |
 | Ceiling / walls / openings | `reconstruction/` | Done (limits documented) |
-| Damage + scope | `reconstruction/damage.py`, `samples/local/my_room_damage/`, `benchmark/damage/` | Done — staged hall fires `water_stain` + `surface_crack` (+ concealed). Rule-based; disclosed |
+| Damage + scope | `reconstruction/damage.py`, `benchmark/damage/` | Done on **photo** path (rule-based). LiDAR emits empty damage/scope (schema-valid; disclosed in tech report) |
 | Fix loop | [fix_loop/](../fix_loop/) | Done |
 | Benchmark report (regen) | [benchmark/REPORT.md](../benchmark/REPORT.md) | Done |
-| Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | Done — **validation / testing only** (H2H, stitch demos, gates); not a production SfM fallback |
-| Bedroom photo/video capture | [samples/local/my_bedroom/](../samples/local/my_bedroom/) (my local testing) | Done; results in `benchmark/h2h/our_room_b/` |
-| Kitchen photo/video capture (3rd room) | [samples/local/my_kitchen/](../samples/local/my_kitchen/) (my local testing) | Done; results in `benchmark/h2h/our_room_c/` |
-| Head-to-head vs Magicplan | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | Done (Android; method disclosed; 2-room minimum + kitchen bonus) |
-| Multi-room stitch + adjacency (3+ rooms + connector) | `reconstruction/stitch.py`, `--stitch-gt my_room,my_bedroom,my_kitchen` | Done (hub + south-wall packing; validation GT rectangles) |
-| Drift ≠ poses_as_is | `--drift-align on` → `plane_anchored_correction`; off ablation | Done for stitch path |
-| Repeatability second capture | [samples/local/my_bedroom_repeat/](../samples/local/my_bedroom_repeat/), [benchmark/REPORT.md](../benchmark/REPORT.md) § Repeatability | Done (photo+video; disclosed repeatable-but-biased when tape-shared) |
+| Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | Done — **eval / stitch-gt / report only**; production photo/video scale is `--ref-length-m` / `--ref-from` only |
+| Bedroom / kitchen photo/video | `benchmark/h2h/our_room_b/`, `our_room_c/` | Done (committed results). Raw media local-only |
+| Head-to-head Part 3 (LiDAR vs consumer app) | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | **Gap** — current table is photo vs Magicplan Android (useful, not Part 3). Need LiDAR↔app on same rooms |
+| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-gt` | Done for **GT-rectangle composition + drift ablation**. Live photo-folder → reconstruct → stitch **not yet** |
+| Drift ≠ poses_as_is | `--drift-align on` / `off` | Done for stitch path |
+| Repeatability | [benchmark/REPORT.md](../benchmark/REPORT.md) § Repeatability | Partial — **repeatable-but-biased** (shared tape scale); disclosed |
+| Same rooms × all 3 tiers | — | **Gap** — phone rooms = photo/video; Stray = LiDAR(+video). No one physical room with independent photo+video+LiDAR yet |
 | Technical report ≤6 pages | [TECHNICAL_REPORT.md](../TECHNICAL_REPORT.md) | Done |
-| Independent COLMAP photo/video | `reconstruction/sfm_colmap.py`, Stray `*_rgb`, `benchmark/colmap_validation/` | Done on company Stray (±5% short-wall PASS). Fails honestly if SfM thin (no GT bypass). |
-| Raw benchmark data | GT CSV, per-room JSON + rendered plans, H2H app exports — all in git | Done for measurements/evidence. **Raw media not in git:** company Stray → drop yourself; `samples/local/` = my local testing only. See [samples/README.md](../samples/README.md). |
+| Independent COLMAP photo/video | `sfm_colmap.py`, Stray `*_rgb`, `benchmark/colmap_validation/` | Done on company Stray (±5% short-wall). Fails honestly if SfM thin |
+| Raw benchmark data | GT CSV, JSON/PNG, H2H exports in git | Partial — raw media not in git (size/privacy); drop Stray locally; author phone media private |
 | Process evidence | git log | Ongoing |
-| README <15 min | [README.md](../README.md) | Done |
+| README <15 min | [README.md](../README.md) | Done (macOS-only called out) |

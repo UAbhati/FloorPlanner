@@ -7,6 +7,8 @@ Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON 
 
 ## Clone + setup (macOS, ~5–15 min)
 
+**Supported execution environment: macOS 13+ (Apple Silicon tested).** Windows and Linux are not supported for the submitted workflow.
+
 You’ll need [Homebrew](https://brew.sh), Python 3.12, and git.
 
 ```bash
@@ -35,7 +37,7 @@ You don’t need this repo’s `samples/` tree — just the files below.
 | Tier | Put in the folder | Example |
 |------|-------------------|---------|
 | `lidar` | Stray export: `odometry.csv` + `depth/` (+ `confidence/`, `rgb.mp4`) | unzipped Stray share |
-| `photo` | `photos/*.jpg` **or** loose stills in the folder root | 2–8 overlapping phone shots |
+| `photo` | `photos/*.jpg` **or** loose stills in the folder root | **2–8** stills (assignment); SfM needs **≥3**; recommended **8** overlapping |
 | `video` | one of `video.mp4`, `rgb.mp4`, or any `*.mp4` / `*.mov` | phone walk or Stray RGB |
 
 ```
@@ -88,13 +90,14 @@ python run.py --input ./stray_export --tier lidar
 # RGB-only COLMAP scaled from that LiDAR run
 python run.py --input ./stray_export --tier video --ref-from out/stray_export/
 
-# Phone stills with a taped long wall
-mkdir -p ./anyroom/photos   # drop 2–8 stills into photos/
+# Phone stills with a taped long wall (prefer ~8 overlapping; ≥3 required for SfM)
+mkdir -p ./anyroom/photos   # drop stills into photos/
 python run.py --input ./anyroom --tier photo --ref-length-m 3.5
 ```
 
 Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).
 
+**Photo count note:** the brief allows 2–8 stills. COLMAP needs ≥3 views — exactly 2 fails closed with a clear error. Use 8 overlapping stills when you can.
 ## What’s in git vs what you drop in
 
 I left raw capture media out of the repo — too big, and my own rooms are private.
@@ -159,5 +162,6 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 
 ## Honest limits
 - Ceiling soft-fails when the walk never looks up.
-- Photo/video COLMAP fails honestly if reconstruction is thin; needs `--ref-length-m` or `--ref-from` for scale.
-- I don’t have an iPhone — LiDAR was validated on company Stray exports, not my own Pro captures; photo/video/H2H are from my Android phone.
+- Photo/video COLMAP fails honestly if reconstruction is thin; needs `--ref-length-m` or `--ref-from` for scale (no silent GT lookup by folder name).
+- Exactly 2 photos: accepted as an attempt, fails SfM closed (≥3 required). Prefer 8 overlapping stills.
+- I don’t have an iPhone — LiDAR validated on company Stray exports; photo/video and current H2H are Android (Part 3 LiDAR↔app bake-off not yet done).

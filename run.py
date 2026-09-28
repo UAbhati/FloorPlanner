@@ -13,9 +13,9 @@ Usage:
   video  — video.mp4 / rgb.mp4 / *.mp4
 
 Default output: ``out/<folder_name>/``. Photo/video always run COLMAP SfM and
-need metric scale via ``--ref-length-m`` or ``--ref-from`` (LiDAR JSON).
-Fail honestly if SfM is too thin. ``benchmark/ground_truth.csv`` is for
-``--stitch-gt`` / validation only.
+need metric scale via ``--ref-length-m`` or ``--ref-from`` (LiDAR JSON) — never
+a silent ``ground_truth.csv`` lookup by folder name. Fail honestly if SfM is
+too thin. ``benchmark/ground_truth.csv`` is for ``--stitch-gt`` / evaluation only.
 """
 from __future__ import annotations
 
@@ -241,14 +241,14 @@ def _colmap_failure_message(
     n = len(images)
     if tier == "photo":
         hint = (
-            "  • PHOTOS: Capture at least 25-30 photos from different angles\n"
-            "           covering all walls, floor, and ceiling\n"
+            "  • PHOTOS: Assignment allows 2–8 stills; SfM needs ≥3 overlapping views.\n"
+            "           Prefer ~8 stills (~30% overlap), covering walls + floor/ceiling tilts.\n"
+            "           Exactly 2 photos will fail closed — add more views.\n"
         )
     else:
         hint = (
-            "  • VIDEO:  Record 30-60 second continuous video walking around\n"
-            "           the room, pointing camera at walls/corners\n"
-            "           (use --colmap-frames N to extract more frames)\n"
+            "  • VIDEO:  Record a 30–90 s continuous walk around the room\n"
+            "           (walls + floor/ceiling tilts; use --colmap-frames N if needed).\n"
         )
     return (
         f"COLMAP reconstruction failed: {exc}\n\n"
@@ -270,15 +270,12 @@ def _resolve_ref_length(
     ref_length_m: float | None,
     ref_from: Path | None,
 ) -> tuple[float | None, str | None]:
-    """Resolve metric scale reference for COLMAP. Returns (length, source_note)."""
+    """Resolve metric scale for COLMAP from CLI."""
     if ref_length_m is not None:
         return ref_length_m, "cli_length"
     if ref_from is not None:
         golden = load_output_json(ref_from)
         return extract_scale_from_lidar_json(golden), f"ref_from={ref_from}"
-    gt = load_ground_truth(GT_PATH, capture_dir.name)
-    if gt and gt.length_m is not None:
-        return gt.length_m, "gt_length"
     return None, None
 
 
@@ -324,16 +321,12 @@ def run_media_tier(
     """
     images, media_note = _collect_tier_images(capture_dir, out_dir, tier, colmap_frames)
 
-    gt = load_ground_truth(GT_PATH, capture_dir.name)
     length, length_src = _resolve_ref_length(capture_dir, ref_length_m, ref_from)
-    ceiling_m = gt.ceiling_height_m if gt else None
     scale_src_parts: list[str] = []
     if length_src:
         scale_src_parts.append(length_src)
     if ref_width_m is not None:
         scale_src_parts.append("cli_width")
-    elif gt and gt.width_m is not None:
-        scale_src_parts.append("gt_width")
 
     if length is None:
         raise SystemExit(
@@ -375,11 +368,8 @@ def run_media_tier(
 
     method_note = f"method=colmap_sfm; scale_source={'+'.join(scale_src_parts)}; {sfm_notes}"
     if ceiling is None:
-        if ceiling_m is not None:
-            frac = TIER_WALL_FRAC[tier]
-            ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
-        else:
-            ceiling = measurement(2.5, 1.5, 3.5)
+        # No GT ceiling lookup — residential prior when SfM has no ceiling plane.
+        ceiling = measurement(2.5, 1.5, 3.5)
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"

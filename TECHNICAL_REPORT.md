@@ -54,7 +54,7 @@ fix_loop/            Declaration + regenerable before/after
 
 **Photo / video path.** Always **COLMAP SfM** on stills or extracted frames (default 100; long walks auto-raise to ≤1.0 s spacing, cap 300). Metric scale from `--ref-from` (LiDAR golden longest wall) or `--ref-length-m` (tape). Soft PCA-up + wall band when dense plane fit fails; room polygon prefers **Manhattan density-peak** (PCA orientation if Hough fails — doorway-bleed resistant), else polar with band/all aspect pick. **Fails honestly** if reconstruction is thin — no GT-rectangle bypass. Company Stray `*_rgb` siblings pass short-wall ±5% vs LiDAR golden (`benchmark/colmap_validation/`).
 
-**Damage / scope.** Rule-based: compact dark → `water_stain`; elongated (aspect ≥4) → `surface_crack`; openings → `concealed_moisture_risk`. Staged room `samples/local/my_room_damage/` (evidence `benchmark/damage/`). Extents assume ~3 m wall span — approximate.
+**Damage / scope.** Rule-based on **photo/video** frames: compact dark → `water_stain`; elongated (aspect ≥4) → `surface_crack`; openings → `concealed_moisture_risk`. Staged evidence under `benchmark/damage/`. Extents assume ~3 m wall span — approximate. **LiDAR tier:** schema still emits `damage_regions` / `scope_line_items`, but they are empty (`empty_damage_for_lidar`) — no RGB damage pass on depth-only. Same output *shape* across tiers; photo is where damage content is demonstrated.
 
 **Output.** Every run validates `schema/output.schema.json` and writes `rooms[]`, `stitched_plan`, `drift_correction`, plus a plan PNG.
 
@@ -154,9 +154,9 @@ Artifacts: `benchmark/colmap_validation/`. Long wall ≈0% by construction (scal
 
 Stride sweep 10/20/30: Manhattan holds ~27–33 m² vs old max-radius ~111–159 m². Shape/robustness win; **not** a claimed ≤2 cm / ≤1.5 cm pass.
 
-### 5.6 Head-to-head (Magicplan Android)
+### 5.6 Head-to-head (Magicplan Android) — not Part 3 yet
 
-Free-tier plan export vs our photo-tier outputs on hall + bedroom (required) and kitchen (bonus). Method disclosed in `benchmark/HEAD_TO_HEAD.md`. Not a LiDAR bake-off.
+**Part 3 asks:** LiDAR-tier output vs a consumer scanning app on the same rooms. **What I have:** free-tier Magicplan Android plan export vs our **photo** outputs on hall + bedroom (required) and kitchen (bonus). Method disclosed in `benchmark/HEAD_TO_HEAD.md`. Useful, but **not** the required LiDAR bake-off (needs Pro + app scan of the same rooms).
 
 | Scope | Shared dims | Ours beat or tie | Target |
 |-------|-------------|------------------|--------|
@@ -203,9 +203,11 @@ Evidence: `benchmark/damage/`. Rule-based luminance — not a trained detector.
 4. **Thin COLMAP** (few stills / pure rotation / weak overlap) — fail honestly; no GT-rectangle bypass.
 5. **Mirrors / glass / closed doors** — holes or missed openings.
 6. **GT rectangle stitch** — composition + drift ablation are real; not live multi-room LiDAR SfM stitch.
-7. **Damage heuristics** — luminance rules; extents approximate.
-8. **Repeatable-but-biased** photo/video when both runs share tape scale.
+7. **Damage heuristics** — luminance rules on photo/video; LiDAR leaves damage/scope empty (schema-valid).
+8. **Repeatable-but-biased** when both runs share the same explicit `--ref-length-m` tape.
 9. **Walk-in** — graders’ laser is GT. Expect LiDAR `manhattan_rect` when coverage is good; photo/video need `--ref-length-m` (or `--ref-from`) for scale.
+10. **Part 3 H2H gap** — photo↔Magicplan evidence exists; LiDAR↔app on same rooms does not (no personal Pro).
+11. **Same-room × 3 tiers gap** — phone rooms lack LiDAR; Stray rooms lack my tape+photo set.
 
 ---
 
@@ -226,7 +228,7 @@ Evidence: `benchmark/damage/`. Rule-based luminance — not a trained detector.
 
 Cold walk-in: receive Stray export → run all three `--tier` values → compare JSON/plan to laser. Phone-only: `--ref-length-m` / `--ref-width-m` for scale (protocol). Cached committed JSON/PNG replay reported numbers; live path is what defense runs.
 
-**Defense narrative (tools closed).** (1) Why Manhattan density-peak beat polar/hull (doorway bleed + coverage histograms; PCA angle when Hough fails on SfM). (2) Hub stitch + door-center align vs left-align ablation. (3) Photo/video always COLMAP; scale via `--ref-from` / tape; Stray RGB short-wall PASSes vs LiDAR. (4) GT CSV is validation/testing only. (5) Repeatability disclosed as repeatable-but-biased when tape-shared. (6) Damage is rule-based two-class + concealed, not ML.
+**Defense narrative (tools closed).** (1) Why Manhattan density-peak beat polar/hull (doorway bleed + coverage histograms; PCA angle when Hough fails on SfM). (2) Hub stitch + door-center align vs left-align ablation (GT composition disclosed). (3) Photo/video always COLMAP; scale only via `--ref-from` / `--ref-length-m` (no silent GT CSV). Stray RGB short-wall PASSes vs LiDAR. (4) GT CSV is stitch/eval only. (5) Repeatability disclosed as repeatable-but-biased when tape-shared. (6) Damage is rule-based photo path; LiDAR empty lists. (7) Part 3 LiDAR H2H and same-room×3-tier still open without Pro captures.
 
 ---
 

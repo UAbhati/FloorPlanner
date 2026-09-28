@@ -167,12 +167,12 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 - [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix (follow at walk-in)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
 - [benchmark/REPORT.md](benchmark/REPORT.md) — gate/timing tables (`python benchmark/run_benchmark.py`)
-- [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — vs Magicplan
-- [benchmark/ground_truth.csv](benchmark/ground_truth.csv) — tape GT for validation / testing only
+- [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — photo vs Magicplan (not Part 3 LiDAR H2H)
+- [benchmark/ground_truth.csv](benchmark/ground_truth.csv) — tape GT for stitch-gt / eval only
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — 25% fix loop
 
 ## Honest limits
 - Ceiling soft-fails when the walk never looks up.
 - Photo/video COLMAP fails honestly if reconstruction is thin; needs `--ref-length-m` or `--ref-from` for scale (no silent GT lookup by folder name).
 - Exactly 2 photos: accepted as an attempt, fails SfM closed (≥3 required). Prefer 8 overlapping stills.
-- I don’t have an iPhone — LiDAR validated on company Stray exports; photo/video and current H2H are Android (Part 3 LiDAR↔app bake-off not yet done).
+- No personal iPhone Pro — LiDAR on company Stray; photo/video + Magicplan H2H on Android. Part 3 LiDAR↔app and same-room×3 tiers not closed.

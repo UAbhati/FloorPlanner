@@ -1,8 +1,8 @@
 # Technical Report — Indoor Capture → Dimensioned Plan
 
-**Route 2 (stock capture) · Cozmo AI case study · September 2026**  
-**Entrypoint:** `run.py` · **Schema:** `schema/output.schema.json` · **Benchmark regen:** `python benchmark/run_benchmark.py`  
-**Length target:** ≤6 pages (this document is sized to that budget).
+**Route 2 (stock capture) · Cozmo AI case study · September 2026**
+**Entrypoint:** `run.py` · **Schema:** `schema/output.schema.json` · **Benchmark regen:** `python benchmark/run_benchmark.py`
+**Length target:** ≤6 pages.
 
 ---
 
@@ -17,12 +17,17 @@ We produce a dimensioned per-room plan (walls, openings, ceiling height, floor a
 | [Stray Scanner](https://apps.apple.com/app/stray-scanner/id1556844941) | LiDAR depth, poses, intrinsics → export folder |
 | Native Camera | Per-room photo folders and handheld walkthrough video |
 
-The non-engineer protocol (install, walk, avoid, handoff, device matrix) is `docs/CAPTURE_PROTOCOL.md`. Defense walk-in follows that page literally. Reviewers drop company Stray exports into any folder (or `samples/stray/`); `samples/local/` holds author local-testing media (private). Committed JSON/plans under `benchmark/` replace raw author media. See `samples/README.md` and `README.md`.
+Protocol (install, walk, avoid, **handoff**, device matrix): `docs/CAPTURE_PROTOCOL.md`. Defense follows that page literally.
+
+**Hardware honesty.** I do **not** own an iPhone Pro. LiDAR is validated on **company Stray exports**. Photo/video and Magicplan H2H are from my **Android** phone. Assignment target hardware remains iPhone 15+ / Pro for walk-in; the pipeline accepts those exports cold.
 
 ```bash
 python run.py --input <capture_folder> --tier lidar
 python run.py --input <capture_folder> --tier video --ref-from <lidar_out_dir/>
 python run.py --input <capture_folder> --tier photo --ref-length-m <long_wall_m>
+# Live stitch from prior-run JSONs:
+python run.py --stitch-inputs out/hall,out/bedroom,out/kitchen --tier photo --hub <id> --drift-align on
+# Tape-rectangle stitch demo / drift ablation:
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out out/stitch
 python run.py --compare <out_a/> <out_b/>
 ```
@@ -32,206 +37,140 @@ python run.py --compare <out_a/> <out_b/>
 ## 2. Architecture
 
 ```
-capture_io/           Stray loader; phone photo/video resolve + ffmpeg frames; sample path aliases
+capture_io/           Stray loader; phone photo/video resolve + ffmpeg frames
 reconstruction/
-  pointcloud.py       Depth + odometry → metric cloud (confidence-gated, voxel downsample)
-  planes.py           Two-stage floor / ceiling RANSAC (fixed seed for determinism)
-  wall_detection.py   Manhattan density-peak rect (Hough or PCA angle) → polar → hull
+  pointcloud.py       Depth + odometry → metric cloud
+  planes.py           Floor / ceiling RANSAC
+  wall_detection.py   Manhattan density-peak → polar → hull
   room_polygon.py     Walls, openings, floor area
-  media_layout.py     Tape GT load + rectangle helper for stitch / validation only
-  sfm_colmap.py       COLMAP SfM → soft up-axis → density-peak / polar room + metric scale
-  stitch.py           Hub + satellites, opening-anchored placement + drift ablation
+  media_layout.py     GT CSV load for --stitch-gt / eval only
+  sfm_colmap.py       COLMAP SfM + metric scale
+  stitch.py           stitch_from_rooms (live) + stitch_from_gt (tape demo)
   damage.py           water_stain + surface_crack + concealed_behind_opening
-  render.py           Top-down plan PNG (single + stitched)
-  validation.py       LiDAR golden vs COLMAP compare JSON/PNG
-run.py                Tier dispatch, CI widths, schema validation, JSON emit
-schema/               Output contract
-benchmark/            GT CSV (validation only), REPORT, H2H, damage, COLMAP compare artifacts
+  render.py / validation.py
+run.py                Tier dispatch, --stitch-inputs / --stitch-gt, schema emit
+benchmark/            REPORT, H2H, damage, COLMAP validation, GT CSV
 fix_loop/            Declaration + regenerable before/after
 ```
 
-**LiDAR path (centimetre ambition).** Fuse a confidence-gated, voxel-downsampled cloud from Stray depth + poses → fit **floor** (largest RANSAC plane) → up-axis → **ceiling** only among points ≥ ~1.8 m above floor, reject heights &lt; 1.7 m (furniture) → mid-height wall band → **Manhattan density-peak rectangle** (Hough angle mod 90°, per-axis histogram-mode on coverage-deduped cells; fallback polar outline, then hull) → gap openings → JSON + plan PNG. Ceiling soft-fail: residential prior CI (1.5–3.5 m) + explicit note — never a silent fake 0.
+**LiDAR.** Stray cloud → floor RANSAC → ceiling (≥ ~1.8 m band; reject &lt; 1.7 m furniture) → wall band → **Manhattan density-peak rectangle** (fallback polar, then hull) → openings → JSON + plan. Ceiling soft-fail uses residential prior CI + note.
 
-**Photo / video path.** Always **COLMAP SfM** on stills or extracted frames (default 100; long walks auto-raise to ≤1.0 s spacing, cap 300). Metric scale from `--ref-from` (LiDAR golden longest wall) or `--ref-length-m` (tape). Soft PCA-up + wall band when dense plane fit fails; room polygon prefers **Manhattan density-peak** (PCA orientation if Hough fails — doorway-bleed resistant), else polar with band/all aspect pick. **Fails honestly** if reconstruction is thin — no GT-rectangle bypass. Company Stray `*_rgb` siblings pass short-wall ±5% vs LiDAR golden (`benchmark/colmap_validation/`).
+**Photo / video.** Always **COLMAP SfM**. Scale **only** via `--ref-length-m` or `--ref-from` — **no silent `ground_truth.csv` lookup by folder name**. Thin reconstruction **fails closed**. Stray `*_rgb` siblings pass short-wall ±5% vs LiDAR golden (`benchmark/colmap_validation/`). Assignment allows 2–8 stills; SfM needs ≥3 overlapping views (exactly 2 fails closed); prefer ~8.
 
-**Damage / scope.** Rule-based on **photo/video** frames: compact dark → `water_stain`; elongated (aspect ≥4) → `surface_crack`; openings → `concealed_moisture_risk`. Staged evidence under `benchmark/damage/`. Extents assume ~3 m wall span — approximate. **LiDAR tier:** schema still emits `damage_regions` / `scope_line_items`, but they are empty (`empty_damage_for_lidar`) — no RGB damage pass on depth-only. Same output *shape* across tiers; photo is where damage content is demonstrated.
-
-**Output.** Every run validates `schema/output.schema.json` and writes `rooms[]`, `stitched_plan`, `drift_correction`, plus a plan PNG.
+**Damage.** Rule-based on photo/video frames. LiDAR emits empty `damage_regions` / `scope_line_items` (schema-valid). Evidence: `benchmark/damage/`.
 
 ---
 
 ## 3. Tier design and device matrix
 
-| Tier | Hardware | Metric source | Wall CI posture | Typical runtime* |
-|------|----------|---------------|-----------------|------------------|
-| LiDAR | iPhone Pro + Stray Scanner | Depth + poses (metric) | Plane residuals / method flags | ~2–5 s |
-| Video | Any recent phone, or Stray `rgb.mp4` | COLMAP + `--ref-from` / `--ref-length-m` | ±3% wall target | ~15–60 s (SfM) |
-| Photo | Any recent phone (stills) | Same COLMAP path | ±8% wall target | ~10–40 s (SfM; denser sets needed) |
+| Tier | Assignment target | Also tested | Metric source | Wall CI |
+|------|-------------------|-------------|---------------|---------|
+| LiDAR | iPhone 15 Pro + Stray | Company Stray exports | Depth + poses | Residuals / flags |
+| Video | iPhone 15+ | Android; Stray `rgb.mp4` | COLMAP + ref | ±3% |
+| Photo | iPhone 15+ | Android stills | COLMAP + ref | ±8% |
 
-\*Representative times in `benchmark/REPORT.md`. LiDAR stays seconds; COLMAP dominates photo/video.
+\*Timings in `benchmark/REPORT.md`.
 
-| Job | Tier | Notes |
-|-----|------|-------|
-| Stray `single_*` | lidar | Manhattan rect; fix-loop on ceiling sample |
-| Stray `*_rgb` | video | COLMAP vs LiDAR golden — short-wall **PASS** ±5% |
-| `my_*` phone rooms | photo / video | Local testing; committed H2H under `benchmark/h2h/` |
-| 3-room stitch on/off | photo | Validation stitch from tape GT rows |
+**Calibration.** Photo/video CIs stay at tier width even when COLMAP succeeds. GT CSV is for `--stitch-gt` / offline eval — not production scale.
 
-**Why intervals widen.** Photo/video lack native metric scale; CIs stay at tier width even when COLMAP succeeds. Publishing tighter CIs on thin SfM would be confident garbage.
-
-**Determinism.** Floor/ceiling RANSAC uses a fixed seed (`RANSAC_SEED=42`). Sparse COLMAP up-axis uses deterministic PCA (Open3D RANSAC floor dropped after it jittered short-wall error across the gate).
-
-**Honest accuracy claim.** LiDAR is the centimetre *ambition* path for walk-in. Company Stray rooms have **no tape GT from us**, so opening ≤2 cm and ceiling ≤1.5 cm gates are **UNKNOWN vs gate** on those samples. Photo/video accuracy vs LiDAR is regenerable on Stray RGB (`--compare`). `benchmark/ground_truth.csv` is **tape GT for validation and testing only** (H2H, stitch demos, gate tables) — not a silent production substitute when SfM fails. Walk-in scoring is against the graders’ laser on their capture.
+**Gates vs Stray.** No tape GT on company rooms → opening ≤2 cm / ceiling ≤1.5 cm are **UNKNOWN vs gate**. Walk-in uses graders’ laser.
 
 ---
 
 ## 4. Drift handling and multi-room stitch
 
-Spec fails bare `poses_as_is` on multi-room and requires an on/off ablation.
+**Live path:** `--stitch-inputs` loads prior-run JSON/out dirs → `stitch_from_rooms` (hub + satellites, opening match or south-wall fallback). Drift on/off via `--drift-align`.
 
-**Composition.** Three rooms + connector: hall (`my_room`) as hub; bedroom and kitchen pack along the hall’s south wall (Magicplan side-by-side, 0.14 m dividing-wall gap). Openings sit at the bedroom/kitchen junction (door 0.88 m @ `from_left_m=1.55`, passage 0.77 m @ `2.57`). Satisfies “3+ rooms plus a connector.”
+**Demo / ablation path:** `--stitch-gt` builds tape rectangles from `benchmark/ground_truth.csv` (hall hub + bedroom + kitchen). Footprint **20.138 m²** on/off; method `plane_anchored_correction` vs `poses_as_is`.
 
-**Method (`--drift-align on`):** `plane_anchored_correction` — hub + satellites matched by opening width; door centers align when the shift fits under the hub extent.
+| Setting | Method | Footprint |
+|---------|--------|-----------|
+| on | `plane_anchored_correction` | **20.138 m²** |
+| off | `poses_as_is` | **20.138 m²** |
 
-**Ablation (`--drift-align off`):** `poses_as_is` — pack along the hub wall without door centering. Footprint sum identical; adjacency geometry differs.
+Smoke-tested live COLMAP → `--stitch-inputs` on two Stray RGB rooms (unrelated spaces — CLI proof, not a property claim). Property-grade live stitch needs COLMAP success on connected phone rooms (still often thin).
 
-| Setting | `method_used` | Footprint | Placement |
-|---------|---------------|-----------|-----------|
-| on | `plane_anchored_correction` | **20.138 m²** | Door centers aligned (Δ≈0 with current GT) |
-| off | `poses_as_is` | **20.138 m²** | Packed west→east; no door centering |
-
-Footprint = 11.6644 + 4.7385 + 3.735 m². Regenerable: `--stitch-gt my_room,my_bedroom,my_kitchen`. **Limit disclosed:** stitch uses tape/GT rectangles for the multi-room *composition and drift ablation* demo — not independent multi-room LiDAR from a cold Stray walk (no iPhone Pro multi-room export on our side).
-
-**Why door-center align, not pose-graph loop closure.** We do not have continuous multi-room LiDAR poses across the apartment. The honest drift story is *opening-plane anchoring*: each shared door is a metric hinge in the floor plane. The ablation shows the hinge matters for adjacency even when area is unchanged.
+**Why opening hinges, not pose-graph loop closure.** No continuous multi-room Pro walk on my side. Drift story = door-center alignment in the floor plane.
 
 ---
 
-## 5. Error budget and calibration analysis
+## 5. Error budget and calibration
 
-### 5.1 Error budget by quantity
+### 5.1 Budget
 
-| Quantity | Photo | Video | LiDAR (when plane/method healthy) |
-|----------|-------|-------|-----------------------------------|
-| Wall length | ±8% of value | ±3% of value | Residual / low_confidence flag; no cm claim without GT |
-| Floor area | Scaled from wall CIs | Same | Same |
-| Ceiling | ±8% if measured; else prior | ±3% if measured | Plane sigma when covered; else prior 1.5–3.5 m + note |
-| Openings | Inherited wall method; phantom/miss scored at walk-in | Same | Gap heuristic; ≤2 cm **not claimed** on Stray |
+| Quantity | Photo | Video | LiDAR |
+|----------|-------|-------|-------|
+| Wall | ±8% | ±3% | Residual / low_confidence; no cm claim without GT |
+| Ceiling | ±8% or prior | ±3% or prior | Plane σ or prior 1.5–3.5 m |
+| Openings | Inherited | Inherited | Gap heuristic; ≤2 cm not claimed on Stray |
 
-### 5.2 Self-built benchmark composition
+### 5.2 Benchmark composition
 
-| Capture | Tiers exercised | GT / compare | Role |
-|---------|-----------------|--------------|------|
-| `my_room` / bedroom / kitchen | photo, video | Tape in `ground_truth.csv` (validation) | Multi-room + H2H |
-| `my_bedroom_repeat` | photo, video | Same bedroom tape rows | Repeatability pair |
-| `my_room_damage` | photo | Same hall GT | Two visual damage classes |
-| Stray `single_*` | lidar + video (`*_rgb`) | LiDAR as COLMAP golden | Walk-in-shaped LiDAR + SfM |
+| Capture | Tiers | Role |
+|---------|-------|------|
+| Stray `single_*` | lidar + video (`*_rgb`) | Walk-in-shaped LiDAR; COLMAP vs golden |
+| `my_*` phone rooms | photo / video | Live COLMAP + explicit tape refs; H2H under `benchmark/h2h/` |
+| `my_bedroom_repeat` | photo / video | Live COLMAP repeat — geometry **not** identical (gate FAIL; disclosed) |
 
-### 5.3 Photo / video vs LiDAR (Stray COLMAP)
+**Gap (no Pro):** same physical room with independent photo + video + LiDAR not available.
 
-On company Stray RGB siblings, COLMAP scaled with `--ref-from` LiDAR golden:
+### 5.3 Stray COLMAP vs LiDAR golden
 
-| Sample | Frames | Short-wall err | Area err | Verdict |
-|--------|--------|----------------|----------|---------|
-| `single_room` | 100 | **2.8%** | 2.8% | **PASS** (±5% wall / ±10% area) |
-| `single_scan_floor` | 150 | **1.5%** | 1.5% | **PASS** |
-| `single_scan_with_ceiling` | 215 | **1.8%** | 1.8% | **PASS** |
+| Sample | Short-wall err | Verdict |
+|--------|----------------|---------|
+| `single_room` | **2.8%** | PASS ±5% |
+| `single_scan_floor` | **1.5%** | PASS |
+| `single_scan_with_ceiling` | **1.8%** | PASS |
 
-Artifacts: `benchmark/colmap_validation/`. Long wall ≈0% by construction (scale). Sparse phone stills (2–8) can still fail SfM — fail closed with a coverage hint; denser overlap is required for the photo path.
+### 5.4 Head-to-head — Part 3 gap disclosed
 
-**How CIs are applied.** Wall length \(L\): photo \([L(1-0.08),\, L(1+0.08)]\), video \([L(1-0.03),\, L(1+0.03)]\). LiDAR widens when `*_large` / `low_confidence=True` (doorway bleed).
+Brief asks **LiDAR vs consumer app** on the same rooms. **Delivered:** Magicplan Android (typed plan) vs our **photo** tier on hall + bedroom (+ kitchen) — **13/13** beat/tie shared dims (`benchmark/HEAD_TO_HEAD.md`). Useful engineering evidence; **not** Part 3. Cannot complete LiDAR↔app without a Pro.
 
-### 5.4 Repeatability (spec: ≤1 cm or 0.5% per wall; ceiling spread ≤1 cm)
+### 5.5 Damage
 
-`my_bedroom` vs `my_bedroom_repeat`, photo and video: walls Δ = **0 cm**, ceiling spread = **0 cm** on committed regenerable artifacts that share tape scale rows (`GT_ROOM_ALIASES`). Spec language: **repeatable-but-biased** vs unrepeatable — we have the former (`benchmark/REPORT.md`). Independent SfM-on-SfM repeat is stronger when both clips clear COLMAP.
-
-### 5.5 LiDAR qualitative (no company-room tape)
-
-| Sample | Method | Area | Ceiling | Notes |
-|--------|--------|------|---------|-------|
-| `single_scan_with_ceiling` | `manhattan_rect` | **30.5 m²** | ~1.83 m | Fix-loop capture |
-| `single_scan_floor` | `manhattan_rect` | **27.0 m²** | ~1.83 m | |
-| `single_room` | `manhattan_rect` | **~9.9 m²** | soft-fail (~1.25 m) | Prior CI |
-
-Stride sweep 10/20/30: Manhattan holds ~27–33 m² vs old max-radius ~111–159 m². Shape/robustness win; **not** a claimed ≤2 cm / ≤1.5 cm pass.
-
-### 5.6 Head-to-head (Magicplan Android) — not Part 3 yet
-
-**Part 3 asks:** LiDAR-tier output vs a consumer scanning app on the same rooms. **What I have:** free-tier Magicplan Android plan export vs our **photo** outputs on hall + bedroom (required) and kitchen (bonus). Method disclosed in `benchmark/HEAD_TO_HEAD.md`. Useful, but **not** the required LiDAR bake-off (needs Pro + app scan of the same rooms).
-
-| Scope | Shared dims | Ours beat or tie | Target |
-|-------|-------------|------------------|--------|
-| Hall + bedroom (required) | 9 | **9 / 9** | ≥70% |
-| + kitchen (bonus) | 13 | **13 / 13** | ≥70% |
-
-### 5.7 Damage composition gate
-
-| Class | Rule | Role |
-|-------|------|------|
-| `water_stain` | `stain_dark_patch` | Visual class 1 |
-| `surface_crack` | `crack_elongated_mark` (aspect ≥4) | Visual class 2 |
-| `concealed_moisture_risk` | `concealed_behind_opening` | Rule flag (not a third visual class) |
-
-Evidence: `benchmark/damage/`. Rule-based luminance — not a trained detector.
+`water_stain` / `surface_crack` / `concealed_moisture_risk` on staged hall photos (`benchmark/damage/`). Rule-based, not ML.
 
 ---
 
-## 6. Fix-loop story (25% weight)
+## 6. Fix-loop (25%)
 
-**Worst gate before.** LiDAR footprint on `single_scan_with_ceiling`: convex hull → **~115 m²**, **8-vertex** irregular polygon.
-
-**Root cause.** Wall-band points are a **filled** set (furniture + doorway bleed), not a thin wall ring. Hull = outer envelope of everything seen.
-
-**Round 1 (partial).** Polar max-radius → oriented rect; fixed 4-wall shape but chased bleed (115 → **139 m²**).
-
-**Round 2 (shipped primary).** **Manhattan density-peak rectangle:** Hough (or PCA) dominant direction; per-axis histogram-mode on occupancy cells; equal opposite sides by construction. CLI `--wall-method hull|polar|manhattan|auto`.
-
-| Capture | Hull | Polar (R1) | Manhattan (R2) |
-|---------|------|------------|----------------|
-| `single_scan_with_ceiling` | 115.2 m², 8 walls | 139.3 m², low_conf | **30.5 m²**, low_conf=**False** |
-| `single_scan_floor` | — | ~112.9 m², large | **27.0 m²** |
-| `single_room` | — | ~35.1 m² | **~9.9 m²** |
-
-**Post-mortem.** Round 2 targets max-radius vs density-peak; ~4–5× area drop, stride-stable. Still **no tape GT on Stray** — shape claim for walk-in, not a centimetre gate pass. Bundle: `fix_loop/DECLARATION.md`, `before/` / `after/`, `python fix_loop/regenerate.py`.
+**Before:** hull on `single_scan_with_ceiling` → **~115 m²**, 8-vertex junk.
+**Cause:** filled wall-band (clutter + doorway bleed).
+**After:** Manhattan density-peak → **~30.5 m²**, 4 walls, `low_confidence=False`.
+Bundle: `fix_loop/DECLARATION.md`, `before/`, `after/`, `python fix_loop/regenerate.py`.
 
 ---
 
-## 7. Known failure modes (including walk-in)
+## 7. Known failure modes
 
-1. **Doorway bleed / multi-space walks** — density-peak resists far better than hull/polar; still no Stray tape for cm validation.
-2. **Eye-level-only LiDAR** — ceiling soft-fail; prior CI + note (protocol: tilt up/down).
-3. **Furniture planes ~1.2–1.5 m** — rejected as ceiling (&lt; 1.7 m).
-4. **Thin COLMAP** (few stills / pure rotation / weak overlap) — fail honestly; no GT-rectangle bypass.
-5. **Mirrors / glass / closed doors** — holes or missed openings.
-6. **GT rectangle stitch** — composition + drift ablation are real; not live multi-room LiDAR SfM stitch.
-7. **Damage heuristics** — luminance rules on photo/video; LiDAR leaves damage/scope empty (schema-valid).
-8. **Repeatable-but-biased** when both runs share the same explicit `--ref-length-m` tape.
-9. **Walk-in** — graders’ laser is GT. Expect LiDAR `manhattan_rect` when coverage is good; photo/video need `--ref-length-m` (or `--ref-from`) for scale.
-10. **Part 3 H2H gap** — photo↔Magicplan evidence exists; LiDAR↔app on same rooms does not (no personal Pro).
-11. **Same-room × 3 tiers gap** — phone rooms lack LiDAR; Stray rooms lack my tape+photo set.
+1. Doorway bleed / multi-space — density-peak helps; no Stray tape for cm gates.
+2. Eye-level-only LiDAR — ceiling soft-fail.
+3. Thin COLMAP — fail closed (≥3 views; prefer 8).
+4. `--stitch-gt` = tape composition demo; prefer `--stitch-inputs` when live rooms exist.
+5. Repeatability — live COLMAP on two walks with shared `--ref-length-m`; walls **disagree** (gate FAIL). Not the old tape-rectangle identical pair.
+6. LiDAR damage lists empty; staged damage evidence is photo (`benchmark/damage/`; live 5-still SfM thin).
+7. **No personal Pro** → Part 3 LiDAR H2H and same-room×3 tiers incomplete.
+8. Phone COLMAP can clear SfM yet miss ±8%/±3% short-wall vs tape (honest FAIL in REPORT).
+9. Walk-in — graders’ laser is GT; cold CLI on their capture.
 
 ---
 
-## 8. Reproduction and walk-in readiness
+## 8. Reproduction / submission
 
-| Deliverable | Location |
-|-------------|----------|
-| One-command CLI | `README.md`, `run.py` |
-| Capture protocol + device matrix | `docs/CAPTURE_PROTOCOL.md` |
-| Sample drop / privacy | `samples/README.md` (`stray/` vs `local/`) |
-| Benchmark tables + timing | `benchmark/REPORT.md` ← `run_benchmark.py` |
-| Ground truth (validation only) | `benchmark/ground_truth.csv` |
-| COLMAP vs LiDAR | `benchmark/colmap_validation/` |
-| Head-to-head | `benchmark/HEAD_TO_HEAD.md`, `benchmark/h2h/` |
-| Damage evidence | `benchmark/damage/` |
+| Item | Location |
+|------|----------|
+| Setup &lt;15 min (macOS) | `README.md` |
+| Protocol + handoff | `docs/CAPTURE_PROTOCOL.md` |
+| Compliance | `docs/COMPLIANCE_MATRIX.md` |
+| Benchmark | `benchmark/REPORT.md` |
 | Fix loop | `fix_loop/` |
-| Compliance matrix | `docs/COMPLIANCE_MATRIX.md` |
 
-Cold walk-in: receive Stray export → run all three `--tier` values → compare JSON/plan to laser. Phone-only: `--ref-length-m` / `--ref-width-m` for scale (protocol). Cached committed JSON/PNG replay reported numbers; live path is what defense runs.
+Cold walk-in: drop Stray/phone folder → `--tier lidar|photo|video` (+ `--ref-length-m` for phone). Cached JSON/PNG under `benchmark/` replay reported tables; live path is what defense runs.
 
-**Defense narrative (tools closed).** (1) Why Manhattan density-peak beat polar/hull (doorway bleed + coverage histograms; PCA angle when Hough fails on SfM). (2) Hub stitch + door-center align vs left-align ablation (GT composition disclosed). (3) Photo/video always COLMAP; scale only via `--ref-from` / `--ref-length-m` (no silent GT CSV). Stray RGB short-wall PASSes vs LiDAR. (4) GT CSV is stitch/eval only. (5) Repeatability disclosed as repeatable-but-biased when tape-shared. (6) Damage is rule-based photo path; LiDAR empty lists. (7) Part 3 LiDAR H2H and same-room×3-tier still open without Pro captures.
+**Defense (tools closed).** (1) Manhattan vs polar/hull. (2) `--stitch-inputs` live + `--stitch-gt` ablation disclosed. (3) Scale only CLI refs; live phone COLMAP may miss tape ±8%/±3% — REPORT fails honestly. (4) Stray RGB ±5% PASS. (5) Repeatability live SfM disagrees across walks. (6) Damage photo committed evidence. (7) No Pro → Part 3 / same-room×3 gaps owned; walk-in still cold on graders’ device.
 
 ---
 
 ## 9. Summary
 
-End-to-end Route 2 pipeline: honest tier CIs, regenerable fix-loop (hull → polar → Manhattan density-peak), COLMAP photo/video with fail-closed thin SfM, Stray RGB validated against LiDAR golden, 3-room+connector opening-anchored stitch with drift ablation, Magicplan H2H, repeatability pair, staged damage. Main remaining risk: **centimetre LiDAR on the unseen walk-in room** — not cold Stray handoff or composition breadth.
+Route 2 pipeline with honest CIs, regenerable fix-loop, COLMAP fail-closed, Stray RGB validated against LiDAR, live `--stitch-inputs` plus GT drift ablation, photo↔Magicplan H2H. **Main residual risks:** centimetre LiDAR on the unseen walk-in room, and brief rows that require a personal Pro (Part 3 LiDAR H2H, same-room×3 tiers) which I cannot close without that hardware.

@@ -1,27 +1,28 @@
 # samples/
 
-Each capture is **one folder**. Pass it with `--input <relative_or_absolute_path>`.
-Grouping under `stray/` / `local/` is optional; the CLI only cares about files inside the folder.
+Each capture is just **one folder**. Pass it with `--input <path>` — relative
+or absolute both work. Putting things under `stray/` / `local/` is optional;
+the CLI only cares what’s inside the folder.
 
 ## What to put in a capture folder
 
 | Tier | Required contents |
 |------|-------------------|
 | `--tier lidar` | `odometry.csv` + `depth/` (Stray export; usually also `confidence/`, `rgb.mp4`) |
-| `--tier photo` | `photos/` with stills, **or** image files in the folder root (`.jpg` / `.png` / …) |
+| `--tier photo` | `photos/` with stills, **or** images loose in the folder root |
 | `--tier video` | `video.mp4`, `rgb.mp4`, or any `*.mp4` / `*.mov` |
 
 ```
-<my_capture>/                 # any path you pass to --input
+<my_capture>/                 # whatever you pass to --input
   odometry.csv                # LiDAR
   depth/
   confidence/
   rgb.mp4                     # LiDAR and/or video
   photos/*.jpg                # photo
-  video.mp4                   # video (if not using rgb.mp4)
+  video.mp4                   # video (if you’re not using rgb.mp4)
 ```
 
-A folder may hold more than one modality; `--tier` picks which path runs.
+One folder can hold more than one modality — `--tier` picks which path runs.
 
 ## Commands
 
@@ -49,25 +50,25 @@ samples/
     single_room/
     single_room_rgb/             # rgb.mp4 only → COLMAP tests
     …
-  local/                         # author phone rooms (privacy, not in git)
+  local/                         # my phone rooms (private, not in git)
     my_room/
     …
 ```
 
-Short names still resolve if you use these drop zones
+If you use these drop zones, short names still resolve
 (`--input single_room` → `samples/stray/single_room`).
 
-## What is / is not in this repo
+## What’s in the repo / what’s not
 
 | Path | In GitHub? | Who has the media? |
 |------|------------|--------------------|
-| `samples/stray/single_room` (+ `_rgb`) | **No media** (drop yourself) | Tester — same Stray exports for every candidate |
-| `samples/local/my_*` | **No** (privacy) | Author only |
+| `samples/stray/single_room` (+ `_rgb`) | **No media** — drop it yourself | Testers (same Stray exports for everyone) |
+| `samples/local/my_*` | **No** (privacy) | Just me |
 | Benchmark JSON / plan PNGs / REPORT / H2H | **Yes** | Everyone |
 
 ## Tester setup (company Stray names) — optional
 
-1. Copy the three full Stray exports into `samples/stray/` (keep names).
+1. Copy the three full Stray exports into `samples/stray/` (keep the names).
 2. RGB-only siblings for COLMAP:
 
 ```bash
@@ -83,4 +84,4 @@ python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/
 python run.py --compare out/single_room/ out/single_room_rgb/
 ```
 
-Details: [stray/README.md](stray/README.md) · author rooms: [local/README.md](local/README.md)
+More: [stray/README.md](stray/README.md) · my rooms: [local/README.md](local/README.md)

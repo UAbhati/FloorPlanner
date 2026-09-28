@@ -1,9 +1,10 @@
-# my_bedroom (Android bedroom capture)
+# my_bedroom
 
-Adjacent rectangle room used for **photo** / **video** tiers + tape GT.
-Door on the north wall into `my_room` (hall).
+Android capture of the bedroom next to the hall — photo / video + tape GT.
+Door on the north wall opens into `my_room`.
 
 ## Layout (tape)
+
 | Item | Value |
 |------|--------|
 | West / East walls | **1.95 m** |
@@ -12,11 +13,13 @@ Door on the north wall into `my_room` (hall).
 | North opening | door to hall **0.88 m** |
 
 ## Files
+
 - `photos/` — overlapping stills
 - `video.mp4` — handheld walkthrough
 - GT: `../../benchmark/ground_truth.csv` (`room_id=my_bedroom`)
 
 ## Run
+
 ```bash
 python run.py --input samples/local/my_bedroom --tier photo --out out/
 python run.py --input samples/local/my_bedroom --tier video --out out/

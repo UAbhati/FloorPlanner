@@ -1,11 +1,11 @@
-# samples/stray/ — Stray Scanner captures
+# samples/stray/
 
-Optional drop zone for the three company exports. You can keep Stray folders
-anywhere and pass `--input <path>`; this directory is only a convenience.
+Optional drop zone for the three company Stray exports. You can keep them
+anywhere and pass `--input <path>` — this folder is just convenient naming.
 
 ## Full LiDAR exports (golden)
 
-Each folder must include: `odometry.csv`, `depth/`, `confidence/`, `rgb.mp4`.
+Each folder needs: `odometry.csv`, `depth/`, `confidence/`, `rgb.mp4`.
 
 ```bash
 python run.py --input samples/stray/single_room --tier lidar
@@ -21,7 +21,8 @@ python run.py --input /path/to/your/unzipped_stray_export --tier lidar
 
 ## RGB-only siblings (COLMAP photo/video)
 
-A second folder that contains only `rgb.mp4` (copy or symlink from the full export):
+I keep a second folder with only `rgb.mp4` (copy or symlink from the full export)
+so I can run real COLMAP without touching depth:
 
 ```bash
 mkdir -p samples/stray/single_room_rgb
@@ -32,5 +33,5 @@ python run.py --input samples/stray/single_room_rgb --tier video --ref-from out/
 python run.py --compare out/single_room/ out/single_room_rgb/
 ```
 
-`--tier` selects modality: full Stray folders are LiDAR golden; `*_rgb` folders
-exercise real COLMAP (no depth reuse).
+`--tier` picks the path: full Stray folders → LiDAR golden; `*_rgb` folders →
+COLMAP (no depth reuse).

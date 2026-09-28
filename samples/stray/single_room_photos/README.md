@@ -1,8 +1,9 @@
-# single_room_photos — photo-tier COLMAP smoke test
+# single_room_photos
 
-Stills sampled from `single_room` RGB video (same room as the LiDAR golden).
-Not a substitute for a real 2–8 still protocol capture — sparse sets can fail
-SfM; ~30 overlapping views is a practical photo-tier smoke test.
+Stills I sampled from the `single_room` RGB video — same room as the LiDAR golden.
+This is a smoke test for the photo tier, not a stand-in for a real 2–8 still
+protocol capture. Sparse sets can fail SfM; ~30 overlapping views is enough to
+exercise the path.
 
 ```bash
 python run.py --input samples/stray/single_room --tier lidar

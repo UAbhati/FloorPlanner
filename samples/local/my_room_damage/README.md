@@ -1,21 +1,21 @@
-# my_room_damage — staged two-class damage capture
+# my_room_damage
 
-Benchmark composition requirement: **one furnished room with staged damage
-spanning two damage classes**. Same physical hall as `my_room` (GT aliased
-via `GT_ROOM_ALIASES`).
+Same hall as `my_room`, but I staged real wall damage so the damage gate has
+something to fire on — two visual classes in one furnished room.
+GT aliases back to `my_room` via `GT_ROOM_ALIASES`.
 
-## What was captured
+## What I captured
 
-5 stills of the hall focusing on real wall damage (peeling paint / moisture
-patch + elongated crack). Furniture/openings in frame.
+5 stills aimed at peeling paint / moisture patch + an elongated crack.
+Furniture and openings still in frame.
 
-| Class | Rule | Result on this capture |
-|-------|------|------------------------|
+| Class | Rule | On this capture |
+|-------|------|-----------------|
 | `water_stain` | `stain_dark_patch` | fired |
 | `surface_crack` | `crack_elongated_mark` | fired |
-| `concealed_moisture_risk` | `concealed_behind_opening` | fired (door openings in GT) |
+| `concealed_moisture_risk` | `concealed_behind_opening` | fired (doors in GT) |
 
-Committed evidence: `benchmark/damage/my_room_damage_photo.json` (+ plan PNG).
+Committed output: `benchmark/damage/my_room_damage_photo.json` (+ plan PNG).
 
 ## Run
 
@@ -25,4 +25,4 @@ Committed evidence: `benchmark/damage/my_room_damage_photo.json` (+ plan PNG).
 
 ## Status
 
-**DONE** — capture in `photos/`; benchmark gate PASS (rule-based; disclosed).
+Done — photos in `photos/`. Gate PASS. Rule-based, disclosed as such.

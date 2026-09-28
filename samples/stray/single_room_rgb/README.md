@@ -1,19 +1,18 @@
-# samples/stray/<name>_rgb — RGB-only COLMAP test harness
+# single_room_rgb
 
-Video-only sibling of the full Stray export. Used to exercise the **photo/video
-COLMAP path** without LiDAR depth. Compare against the LiDAR golden from the
-full export folder.
+RGB-only sibling of the full Stray export. I use this to run COLMAP on video
+without depth, then compare against the LiDAR golden from `single_room/`.
 
 ## Setup
 
-After dropping the full Stray export (e.g. `samples/stray/single_room/`):
+After you’ve dropped the full export into `samples/stray/single_room/`:
 
 ```bash
-# symlink is created locally (media is gitignored)
+# symlink locally (media is gitignored)
 ln -sfn ../single_room/rgb.mp4 samples/stray/single_room_rgb/rgb.mp4
 ```
 
-Same pattern for `single_scan_floor_rgb` and `single_scan_with_ceiling_rgb`.
+Same idea for `single_scan_floor_rgb` and `single_scan_with_ceiling_rgb`.
 
 ## Run + compare
 
@@ -30,4 +29,4 @@ python run.py --compare out/single_room/ out/single_room_rgb/
 ```
 
 Optional: `--colmap-frames N` (default 100). Photo tier on an RGB-only folder
-extracts frames from `rgb.mp4` the same way.
+just pulls frames from `rgb.mp4` the same way.

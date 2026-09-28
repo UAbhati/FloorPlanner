@@ -7,7 +7,7 @@ Route 2 pipeline: **Stray Scanner** (LiDAR) + phone photo/video → schema JSON 
 
 ## Clone + setup (macOS, ~5–15 min)
 
-**Prerequisites:** [Homebrew](https://brew.sh), Python 3.12, git.
+You’ll need [Homebrew](https://brew.sh), Python 3.12, and git.
 
 ```bash
 git clone https://github.com/UAbhati/FloorPlanner.git
@@ -29,8 +29,8 @@ python run.py --help
 
 ## Capture folder layout
 
-`--input` is any folder (relative or absolute). Tier selects which files are used.
-You do **not** need this repo’s `samples/` tree — only the files below.
+`--input` is any folder (relative or absolute). Tier picks which files get used.
+You don’t need this repo’s `samples/` tree — just the files below.
 
 | Tier | Put in the folder | Example |
 |------|-------------------|---------|
@@ -97,20 +97,18 @@ Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (
 
 ## What’s in git vs what you drop in
 
-Raw capture media is **not** in this repo (size + privacy). Committed artifacts
-still let you verify every reported number.
+I left raw capture media out of the repo — too big, and my own rooms are private.
+You can still check every number from what’s committed under `benchmark/` and `fix_loop/`.
 
-| What | In git? | Action |
-|------|---------|--------|
-| Benchmark JSON, plan PNGs, REPORT, H2H, fix-loop before/after | Yes | Browse / open — no download needed |
-| Company Stray LiDAR exports | No (testers already have them) | Put each export in any folder; or under `samples/stray/<name>/` |
-| Author phone rooms (`my_room`, …) | No (privacy) | Use committed results under `benchmark/` |
+- **Committed outputs** (JSON, plan PNGs, REPORT, H2H, fix-loop before/after) — already in git; just open them.
+- **Company Stray LiDAR exports** — not in git (testers already have them). Drop each export in any folder, or under `samples/stray/<name>/`.
+- **My phone rooms** (`my_room`, …) — I keep those under [`samples/local/`](samples/local/) for my own testing. Reviewers don’t need that folder; use the committed results in `benchmark/` instead.
 
 More detail: **[samples/README.md](samples/README.md)**
 
 ### Optional: company Stray drop-in names
 
-If you use the shared tester names:
+If you’re using the shared tester names:
 
 ```
 samples/stray/single_room/
@@ -129,15 +127,15 @@ python run.py --compare out/single_room/ out/single_room_rgb/
 
 ### Browse committed outputs (zero media)
 
-- [`fix_loop/before/`](fix_loop/before/) vs [`fix_loop/after/`](fix_loop/after/) — wall-fix regenerable pair
+- [`fix_loop/before/`](fix_loop/before/) vs [`fix_loop/after/`](fix_loop/after/) — wall-fix before/after pair
 - [`benchmark/h2h/`](benchmark/h2h/) — photo/video + stitch ablation JSON/PNG
 - [`benchmark/REPORT.md`](benchmark/REPORT.md) · [`benchmark/HEAD_TO_HEAD.md`](benchmark/HEAD_TO_HEAD.md)
 - [`benchmark/damage/`](benchmark/damage/) — staged two-class damage output
 
 ## Multi-room stitch
 
-Uses room ids from `benchmark/ground_truth.csv` (tape dimensions for validation /
-benchmark stitch demos — not a production substitute for live SfM):
+I stitch from room ids in `benchmark/ground_truth.csv` (tape dims for the demo —
+not a stand-in for live SfM):
 
 ```bash
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
@@ -150,6 +148,7 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 
 ## Docs
 - [samples/README.md](samples/README.md) — capture layout, privacy, adding a room
+- [samples/local/README.md](samples/local/README.md) — my local captures (reviewers don’t need this)
 - [TECHNICAL_REPORT.md](TECHNICAL_REPORT.md) — ≤6-page technical report
 - [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) — Route 2 + device matrix (follow at walk-in)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
@@ -161,8 +160,6 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 ## Honest limits
 - LiDAR: Manhattan density-peak rectangle; falls back to polar then hull; `*_large` / low_confidence = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
-- Photo/video: COLMAP SfM (default 100 frames; long walks auto-raise to ≤1.0s spacing). Fails honestly if reconstruction is thin (no GT-rectangle bypass). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
+- Photo/video: COLMAP SfM (default 100 frames). Fails honestly if reconstruction is thin. Scale via `--ref-length-m` (or `--ref-from`).
 - Stray RGB vs LiDAR golden (scaled): short-wall within ±5% on single_room / floor / ceiling with current sparse fit (PCA-up + polar aspect pick).
 - Multi-room stitch: hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
-- `samples/local/` holds local data-testing captures/results (not required for reviewers); drop your own captures in any folder and pass `--input`.
-- `benchmark/ground_truth.csv` is tape GT used only for validation and testing (H2H, stitch demos, gate checks) — not as a silent production fallback.

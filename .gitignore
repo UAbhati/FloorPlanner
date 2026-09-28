@@ -13,7 +13,6 @@ benchmark/runs/
 # Raw captures stay local (not in git). Keep only docs + empty drop-zone dirs.
 samples/**
 !samples/README.md
-!samples/STRAY_SAMPLES.md
 !samples/stray/
 !samples/stray/README.md
 !samples/local/

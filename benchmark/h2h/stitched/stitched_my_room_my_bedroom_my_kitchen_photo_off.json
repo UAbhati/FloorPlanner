@@ -2,7 +2,7 @@
   "capture_id": "my_room+my_bedroom+my_kitchen",
   "tier": "photo",
   "device": "GT rectangles + opening-anchored stitch (Android Magicplan property)",
-  "generated_at": "2026-09-28T11:49:51.867732+00:00",
+  "generated_at": "2026-09-28T14:20:25.069439+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -282,7 +282,7 @@
             "ci_high_m": 0.96,
             "confidence_level": 0.95
           },
-          "position_on_wall_m": 0.7750000000000001
+          "position_on_wall_m": 1.55
         }
       ],
       "ceiling_height": {
@@ -416,8 +416,8 @@
       ],
       "openings": [
         {
-          "id": "wall_1_opening_0",
-          "wall_id": "wall_1",
+          "id": "wall_2_opening_0",
+          "wall_id": "wall_2",
           "type": "unknown",
           "width": {
             "value_m": 0.77,
@@ -425,7 +425,7 @@
             "ci_high_m": 0.85,
             "confidence_level": 0.95
           },
-          "position_on_wall_m": 0.44499999999999995
+          "position_on_wall_m": 0.0
         }
       ],
       "ceiling_height": {
@@ -442,8 +442,8 @@
       },
       "damage_regions": [
         {
-          "id": "damage_concealed_wall_1_opening_0",
-          "surface_id": "wall_1",
+          "id": "damage_concealed_wall_2_opening_0",
+          "surface_id": "wall_2",
           "class": "concealed_moisture_risk",
           "extent_m2": {
             "value_m": 0.0,
@@ -457,9 +457,9 @@
       ],
       "scope_line_items": [
         {
-          "id": "scope_damage_concealed_wall_1_opening_0",
-          "surface_id": "wall_1",
-          "damage_region_id": "damage_concealed_wall_1_opening_0",
+          "id": "scope_damage_concealed_wall_2_opening_0",
+          "surface_id": "wall_2",
+          "damage_region_id": "damage_concealed_wall_2_opening_0",
           "description": "Probe opening jambs for concealed moisture (rule: concealed_behind_opening)",
           "quantity": 1,
           "unit": "each"
@@ -487,7 +487,7 @@
       {
         "room_a": "my_bedroom",
         "room_b": "my_kitchen",
-        "shared_wall_id": "my_bedroom_east__my_kitchen_west"
+        "shared_wall_id": "my_bedroom__my_kitchen_dividing_wall"
       }
     ],
     "footprint_area": {
@@ -500,6 +500,6 @@
   },
   "drift_correction": {
     "method_used": "poses_as_is",
-    "notes": "my_room-my_bedroom: no opening alignment (ablation) on south/north; my_room-my_kitchen: no opening alignment (fixed position maintains 14cm wall gap); ablation_pair=use --drift-align off/on; tier=photo"
+    "notes": "hub=my_room; wall_gap_m=0.14; my_room-my_bedroom: packed along south at u=0.00m; my_room-my_kitchen: packed along south at u=2.57m; ablation_pair=use --drift-align off/on; tier=photo"
   }
 }

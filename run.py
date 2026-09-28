@@ -57,10 +57,7 @@ from reconstruction.room_polygon import (  # noqa: E402
     project_to_horizontal,
 )
 from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
-from reconstruction.stitch import (  # noqa: E402
-    stitch_from_gt,
-    stitch_three_rooms_property,
-)
+from reconstruction.stitch import stitch_from_gt  # noqa: E402
 from reconstruction.validation import (  # noqa: E402
     compare_output_jsons,
     extract_scale_from_lidar_json,
@@ -434,17 +431,28 @@ def run_media_tier(
     }
 
 
-def run_stitch_gt(room_ids: list[str], out_dir: Path, tier: str, *, align_openings: bool) -> dict:
+def run_stitch_gt(
+    room_ids: list[str],
+    out_dir: Path,
+    tier: str,
+    *,
+    align_openings: bool,
+    hub_id: str | None = None,
+    wall_gap_m: float = 0.14,
+) -> dict:
     """Build a stitched whole-property plan from GT rectangles.
 
-    2 rooms: hall + bedroom (original pairwise stitch).
-    3 rooms (my_room, my_bedroom, my_kitchen, any order): specialized property
-    layout with bedroom and kitchen side-by-side on hall's west wall.
+    2 rooms: longer footprint as hall, other attached on south.
+    3+ rooms: hub (largest area, or ``hub_id``) + satellites matched by
+    opening width; same-wall children packed with ``wall_gap_m``.
     """
-    if set(room_ids) == {"my_room", "my_bedroom", "my_kitchen"}:
-        result = stitch_three_rooms_property(GT_PATH, align_openings=align_openings)
-    else:
-        result = stitch_from_gt(GT_PATH, room_ids, align_openings=align_openings)
+    result = stitch_from_gt(
+        GT_PATH,
+        room_ids,
+        align_openings=align_openings,
+        hub_id=hub_id,
+        wall_gap_m=wall_gap_m,
+    )
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = "drift_on" if align_openings else "drift_off"
     plan_path = out_dir / f"stitched_{'_'.join(room_ids)}_{tier}_{suffix}_plan.png"
@@ -550,7 +558,19 @@ def main() -> None:
         "--stitch-gt",
         type=str,
         default=None,
-        help="comma-separated GT room_ids to stitch (e.g. my_room,my_bedroom)",
+        help="comma-separated GT room_ids to stitch (e.g. my_room,my_bedroom,my_kitchen)",
+    )
+    parser.add_argument(
+        "--hub",
+        type=str,
+        default=None,
+        help="for --stitch-gt with 3+ rooms: hub/connector room_id (default: largest area)",
+    )
+    parser.add_argument(
+        "--wall-gap-m",
+        type=float,
+        default=0.14,
+        help="dividing-wall gap when packing multiple rooms on the same hub wall (default 0.14)",
     )
     parser.add_argument(
         "--drift-align",
@@ -598,7 +618,14 @@ def main() -> None:
             raise SystemExit("--tier is required with --stitch-gt")
         room_ids = [r.strip() for r in args.stitch_gt.split(",") if r.strip()]
         out_dir = args.out or (REPO_ROOT / "out" / f"stitched_{'_'.join(room_ids)}")
-        output = run_stitch_gt(room_ids, out_dir, args.tier, align_openings=(args.drift_align == "on"))
+        output = run_stitch_gt(
+            room_ids,
+            out_dir,
+            args.tier,
+            align_openings=(args.drift_align == "on"),
+            hub_id=args.hub,
+            wall_gap_m=args.wall_gap_m,
+        )
         json_path = _emit(output, out_dir, f"stitched_{'_'.join(room_ids)}_{args.tier}_{args.drift_align}")
     else:
         if args.input is None:

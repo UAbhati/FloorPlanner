@@ -361,34 +361,45 @@ def reconstruct_metric_room(
     if len(wall_band) < 25:
         raise SfMError(f"wall band too thin ({len(wall_band)} points)")
 
-    # Sparse SfM: Manhattan density-peak (LiDAR-tuned) often shrinks the short
-    # axis. Prefer polar oriented-rect. Try mid-height wall band and full cloud;
-    # after normalizing longest wall to 1, keep the larger short axis (outer
-    # envelope). Comparing raw areas is misleading because SfM scale varies.
-    if len(points) < 2000:
-        candidates: list = []
-        for label, cloud in (("band", wall_band), ("all", points)):
-            if len(cloud) < 25:
-                continue
-            pts2d = project_to_horizontal(cloud, up)
-            try:
-                cand = build_room_polygon(pts2d, method="polar")
-            except ValueError:
-                cand = build_room_polygon(pts2d, method="auto")
-            lens = sorted((w.length_m for w in cand.walls), reverse=True)
-            if not lens or lens[0] < 1e-6:
-                continue
-            # short/long after normalizing long → 1
-            aspect = lens[min(2, len(lens) - 1)] / lens[0]
-            candidates.append((aspect, label, cand))
-        if not candidates:
-            raise SfMError("sparse room polygon fit failed")
-        candidates.sort(reverse=True)
-        aspect, src, room = candidates[0]
-        notes.append(f"sparse_rect={room.method}/{src};aspect={aspect:.3f}")
+    # Prefer Manhattan density-peak when it fires (doorway-bleed resistant; PCA
+    # orientation if Hough fails). Otherwise polar: keep the larger short/long
+    # aspect after normalizing the long wall (avoids inward collapse on thin SfM).
+    candidates: list = []
+    for label, cloud in (("band", wall_band), ("all", points)):
+        if len(cloud) < 25:
+            continue
+        pts2d = project_to_horizontal(cloud, up)
+        try:
+            cand = build_room_polygon(pts2d, method="auto")
+        except ValueError:
+            continue
+        lens = sorted((w.length_m for w in cand.walls), reverse=True)
+        if not lens or lens[0] < 1e-6:
+            continue
+        aspect = lens[min(2, len(lens) - 1)] / lens[0]
+        norm_area = cand.floor_area_m2 / (lens[0] * lens[0])
+        is_manhattan = "manhattan" in cand.method
+        candidates.append(
+            {
+                "manhattan": is_manhattan,
+                "aspect": aspect,
+                "norm_area": norm_area,
+                "label": label,
+                "room": cand,
+            }
+        )
+    if not candidates:
+        raise SfMError("sparse room polygon fit failed")
+
+    manhattan = [c for c in candidates if c["manhattan"]]
+    if manhattan:
+        pick = min(manhattan, key=lambda c: c["norm_area"])
     else:
-        pts2d = project_to_horizontal(wall_band, up)
-        room = build_room_polygon(pts2d)
+        pick = max(candidates, key=lambda c: c["aspect"])
+    room = pick["room"]
+    notes.append(
+        f"sparse_rect={room.method}/{pick['label']};aspect={pick['aspect']:.3f}"
+    )
     lengths = sorted((w.length_m for w in room.walls), reverse=True)
     long_wall = lengths[0] if lengths else 0.0
     if long_wall < 1e-3:

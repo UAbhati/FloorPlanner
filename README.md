@@ -134,9 +134,10 @@ python run.py --compare out/single_room/ out/single_room_rgb/
 - [`benchmark/REPORT.md`](benchmark/REPORT.md) · [`benchmark/HEAD_TO_HEAD.md`](benchmark/HEAD_TO_HEAD.md)
 - [`benchmark/damage/`](benchmark/damage/) — staged two-class damage output
 
-## Multi-room stitch (GT rectangles)
+## Multi-room stitch
 
-Uses committed `benchmark/ground_truth.csv` (no raw media required):
+Uses room ids from `benchmark/ground_truth.csv` (tape dimensions for validation /
+benchmark stitch demos — not a production substitute for live SfM):
 
 ```bash
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
@@ -154,6 +155,7 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 - [docs/COMPLIANCE_MATRIX.md](docs/COMPLIANCE_MATRIX.md)
 - [benchmark/REPORT.md](benchmark/REPORT.md) — gate/timing tables (`python benchmark/run_benchmark.py`)
 - [benchmark/HEAD_TO_HEAD.md](benchmark/HEAD_TO_HEAD.md) — vs Magicplan
+- [benchmark/ground_truth.csv](benchmark/ground_truth.csv) — tape GT for validation / testing only
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — 25% fix loop
 
 ## Honest limits
@@ -161,5 +163,6 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 - Ceiling soft-fails when the walk never looks up.
 - Photo/video: COLMAP SfM (default 100 frames; long walks auto-raise to ≤1.0s spacing). Fails honestly if reconstruction is thin (no GT-rectangle bypass). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
 - Stray RGB vs LiDAR golden (scaled): short-wall within ±5% on single_room / floor / ceiling with current sparse fit (PCA-up + polar aspect pick).
-- Multi-room stitch: GT hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
-- Author `samples/local/my_*` media is private; drop your own captures in any folder and pass `--input`.
+- Multi-room stitch: hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
+- `samples/local/` holds local data-testing captures/results (not required for reviewers); drop your own captures in any folder and pass `--input`.
+- `benchmark/ground_truth.csv` is tape GT used only for validation and testing (H2H, stitch demos, gate checks) — not as a silent production fallback.

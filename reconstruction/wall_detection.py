@@ -230,10 +230,23 @@ def _wall_peak_on_side(coords: np.ndarray, median: float, side: str) -> tuple[fl
     return _density_peak_1d(search)
 
 
+def _pca_manhattan_angle(points_2d: np.ndarray) -> float:
+    """Fallback wall angle from 2D PCA (largest-variance axis), folded to [0, pi/2)."""
+    centered = points_2d - np.median(points_2d, axis=0)
+    cov = np.cov(centered.T)
+    vals, vecs = np.linalg.eigh(cov)
+    axis = vecs[:, int(np.argmax(vals))]
+    return float(np.arctan2(axis[1], axis[0]) % (np.pi / 2))
+
+
 def _manhattan_rect_fit(points_2d: np.ndarray) -> WallFitResult | None:
     theta = _dominant_manhattan_angle(points_2d)
     if theta is None:
-        return None
+        # Sparse SfM clouds often fail Hough (thin wall traces); PCA orientation
+        # still lets density-peak suppress doorway bleed.
+        if len(points_2d) < MIN_WALL_SUPPORT_POINTS:
+            return None
+        theta = _pca_manhattan_angle(points_2d)
 
     cells = _occupied_cell_centers(points_2d)
     if len(cells) < MIN_WALL_SUPPORT_POINTS:

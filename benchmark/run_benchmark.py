@@ -156,7 +156,7 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "| Photo walls vs tape (`my_room` / `my_bedroom` / `my_kitchen`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
         "| Video walls vs tape | ±3% | same | PASS (calibrated; not independent SfM) |",
         f"| Repeatability | 1 cm / 0.5% | `my_bedroom` vs `my_bedroom_repeat` (photo + video) | {_repeatability_status(rows)} |",
-        f"| Staged two-class damage room | ≥2 visual classes | `samples/my_room_damage` → {_damage_status(rows)} | {_damage_gate(rows)} |",
+        f"| Staged two-class damage room | ≥2 visual classes | `samples/local/my_room_damage` → {_damage_status(rows)} | {_damage_gate(rows)} |",
         "| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom,my_kitchen` on/off | PASS (GT rectangles; method disclosed) |",
         "| Photo whole-property stitch (3+ rooms) | ±8% footprint | per-room folders + GT stitch; 3 rooms + connector (hall star-center) | PASS (calibrated; 3 rooms) |",
         "| Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |",
@@ -333,7 +333,7 @@ def _repeatability_section(rows: list[dict]) -> list[str]:
     lines = [
         "## Repeatability (`my_bedroom` vs `my_bedroom_repeat`)",
         "",
-        "Same physical bedroom, second capture (`samples/my_bedroom_repeat`). "
+        "Same physical bedroom, second capture (`samples/local/my_bedroom_repeat`). "
         "Gate: per-wall agreement within **1 cm or 0.5%**; ceiling spread across "
         "captures ≤ **1 cm**.",
         "",
@@ -391,28 +391,28 @@ def _repeatability_section(rows: list[dict]) -> list[str]:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     jobs = [
-        ("stray_ceiling_lidar", ["--input", "samples/single_scan_with_ceiling", "--tier", "lidar"]),
-        ("stray_ceiling_photo", ["--input", "samples/single_scan_with_ceiling", "--tier", "photo"]),
-        ("stray_ceiling_video", ["--input", "samples/single_scan_with_ceiling", "--tier", "video"]),
-        ("stray_room_lidar", ["--input", "samples/single_room", "--tier", "lidar"]),
-        ("stray_floor_lidar", ["--input", "samples/single_scan_floor", "--tier", "lidar"]),
-        ("my_room_photo", ["--input", "samples/my_room", "--tier", "photo", "--no-colmap"]),
-        ("my_room_video", ["--input", "samples/my_room", "--tier", "video", "--no-colmap"]),
-        ("my_bedroom_photo", ["--input", "samples/my_bedroom", "--tier", "photo", "--no-colmap"]),
-        ("my_bedroom_video", ["--input", "samples/my_bedroom", "--tier", "video", "--no-colmap"]),
+        ("stray_ceiling_lidar", ["--input", "samples/stray/single_scan_with_ceiling", "--tier", "lidar"]),
+        ("stray_ceiling_photo", ["--input", "samples/stray/single_scan_with_ceiling", "--tier", "photo"]),
+        ("stray_ceiling_video", ["--input", "samples/stray/single_scan_with_ceiling", "--tier", "video"]),
+        ("stray_room_lidar", ["--input", "samples/stray/single_room", "--tier", "lidar"]),
+        ("stray_floor_lidar", ["--input", "samples/stray/single_scan_floor", "--tier", "lidar"]),
+        ("my_room_photo", ["--input", "samples/local/my_room", "--tier", "photo", "--no-colmap"]),
+        ("my_room_video", ["--input", "samples/local/my_room", "--tier", "video", "--no-colmap"]),
+        ("my_bedroom_photo", ["--input", "samples/local/my_bedroom", "--tier", "photo", "--no-colmap"]),
+        ("my_bedroom_video", ["--input", "samples/local/my_bedroom", "--tier", "video", "--no-colmap"]),
         (
             "my_bedroom_repeat_photo",
-            ["--input", "samples/my_bedroom_repeat", "--tier", "photo", "--no-colmap"],
+            ["--input", "samples/local/my_bedroom_repeat", "--tier", "photo", "--no-colmap"],
         ),
         (
             "my_bedroom_repeat_video",
-            ["--input", "samples/my_bedroom_repeat", "--tier", "video", "--no-colmap"],
+            ["--input", "samples/local/my_bedroom_repeat", "--tier", "video", "--no-colmap"],
         ),
-        ("my_kitchen_photo", ["--input", "samples/my_kitchen", "--tier", "photo", "--no-colmap"]),
-        ("my_kitchen_video", ["--input", "samples/my_kitchen", "--tier", "video", "--no-colmap"]),
+        ("my_kitchen_photo", ["--input", "samples/local/my_kitchen", "--tier", "photo", "--no-colmap"]),
+        ("my_kitchen_video", ["--input", "samples/local/my_kitchen", "--tier", "video", "--no-colmap"]),
         (
             "my_room_damage_photo",
-            ["--input", "samples/my_room_damage", "--tier", "photo", "--no-colmap"],
+            ["--input", "samples/local/my_room_damage", "--tier", "photo", "--no-colmap"],
         ),
         (
             "stitch_photo_drift_on",

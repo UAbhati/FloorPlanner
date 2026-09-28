@@ -18,7 +18,7 @@ def main() -> None:
     py = sys.executable
     before = ROOT / "fix_loop" / "before"
     after = ROOT / "fix_loop" / "after"
-    sample = "samples/single_scan_with_ceiling"
+    sample = "samples/stray/single_scan_with_ceiling"
     run([py, "run.py", "--input", sample, "--tier", "lidar", "--wall-method", "hull", "--out", str(before)])
     run([py, "run.py", "--input", sample, "--tier", "lidar", "--wall-method", "auto", "--out", str(after)])
     run(
@@ -26,7 +26,7 @@ def main() -> None:
             py,
             "run.py",
             "--input",
-            "samples/single_room",
+            "samples/stray/single_room",
             "--tier",
             "lidar",
             "--wall-method",

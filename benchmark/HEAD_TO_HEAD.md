@@ -57,8 +57,8 @@ Magicplan app: Kitchen **3.74 m² (1.66 × 2.25)**. Ours: `benchmark/h2h/our_roo
 ## Regenerable runs
 ```bash
 source .venv/bin/activate
-python run.py --input samples/my_room --tier photo --no-colmap --out benchmark/h2h/our_room_a
-python run.py --input samples/my_bedroom --tier photo --no-colmap --out benchmark/h2h/our_room_b
-python run.py --input samples/my_kitchen --tier photo --no-colmap --out benchmark/h2h/our_room_c
+python run.py --input samples/local/my_room --tier photo --no-colmap --out benchmark/h2h/our_room_a
+python run.py --input samples/local/my_bedroom --tier photo --no-colmap --out benchmark/h2h/our_room_b
+python run.py --input samples/local/my_kitchen --tier photo --no-colmap --out benchmark/h2h/our_room_c
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out benchmark/h2h/stitched
 ```

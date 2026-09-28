@@ -18,8 +18,8 @@ Door on the north wall into `my_room` (hall).
 
 ## Run
 ```bash
-python run.py --input samples/my_bedroom --tier photo --no-colmap --out out/
-python run.py --input samples/my_bedroom --tier video --no-colmap --out out/
+python run.py --input samples/local/my_bedroom --tier photo --no-colmap --out out/
+python run.py --input samples/local/my_bedroom --tier video --no-colmap --out out/
 # Stitch with hall
 python run.py --stitch-gt my_room,my_bedroom --tier photo --drift-align on --out out/stitch
 ```

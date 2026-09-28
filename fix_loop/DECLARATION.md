@@ -4,12 +4,12 @@
 
 **Gate:** Floor footprint / wall lengths on LiDAR single-room captures (feeds walk-in + opening gates).
 
-**Failing number (regenerable):** on `samples/single_scan_with_ceiling`, convex-hull wall extraction produced **floor area ≈ 115.15 m²** with an 8-vertex non-rectangular polygon (`wall_method=convex_hull`). That is not a usable single-room plan (openings and wall CIs ride on the same wrong boundary).
+**Failing number (regenerable):** on `samples/stray/single_scan_with_ceiling`, convex-hull wall extraction produced **floor area ≈ 115.15 m²** with an 8-vertex non-rectangular polygon (`wall_method=convex_hull`). That is not a usable single-room plan (openings and wall CIs ride on the same wrong boundary).
 
 Reproduce before:
 ```bash
 source .venv/bin/activate
-python run.py --input samples/single_scan_with_ceiling --tier lidar \
+python run.py --input samples/stray/single_scan_with_ceiling --tier lidar \
   --wall-method hull --out fix_loop/before/
 ```
 
@@ -45,9 +45,9 @@ Cross-checked at frame_stride 10/20/30 on both ceiling-covered samples: Manhatta
 
 Reproduce after:
 ```bash
-python run.py --input samples/single_scan_with_ceiling --tier lidar \
+python run.py --input samples/stray/single_scan_with_ceiling --tier lidar \
   --wall-method auto --out fix_loop/after/
-python run.py --input samples/single_room --tier lidar \
+python run.py --input samples/stray/single_room --tier lidar \
   --wall-method auto --out fix_loop/after/
 ```
 

@@ -2,9 +2,10 @@
 """One-command entrypoint: capture directory -> JSON (schema/output.schema.json) + rendered plan.
 
 Usage:
-    python run.py --input samples/single_scan_with_ceiling --tier lidar --out out/
-    python run.py --input samples/my_room --tier photo --out out/
-    python run.py --input samples/my_room --tier video --out out/
+    python run.py --input samples/stray/single_scan_with_ceiling --tier lidar --out out/
+    python run.py --input samples/local/my_room --tier photo --out out/
+    # Short names also resolve under samples/stray/ or samples/local/:
+    python run.py --input samples/single_room --tier lidar --out out/
 
 Photo/video need metric scale: pass --ref-length-m/--ref-width-m, or rely on
 benchmark/ground_truth.csv for a matching room_id (folder name).
@@ -29,6 +30,7 @@ from capture_io.android_media import (  # noqa: E402
     resolve_photo_dir,
     resolve_video,
 )
+from capture_io.sample_paths import resolve_capture_dir  # noqa: E402
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
 from reconstruction.damage import (  # noqa: E402
     detect_damage_from_photos,
@@ -474,7 +476,12 @@ def run_stitch_gt(room_ids: list[str], out_dir: Path, tier: str, *, align_openin
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=None, help="capture directory")
+    parser.add_argument(
+        "--input",
+        type=Path,
+        default=None,
+        help="capture directory (samples/stray/<name> or samples/local/<name>; short samples/<name> also resolves)",
+    )
     parser.add_argument("--tier", required=True, choices=["lidar", "photo", "video"])
     parser.add_argument("--out", required=True, type=Path, help="output directory")
     parser.add_argument("--ref-length-m", type=float, default=None, help="photo/video long-wall metres")
@@ -511,11 +518,15 @@ def main() -> None:
     else:
         if args.input is None:
             raise SystemExit("--input is required unless --stitch-gt is set")
+        try:
+            capture_dir = resolve_capture_dir(args.input, repo_root=REPO_ROOT)
+        except FileNotFoundError as exc:
+            raise SystemExit(str(exc)) from exc
         if args.tier == "lidar":
-            output = run_lidar_tier(args.input, args.out, wall_method=args.wall_method)
+            output = run_lidar_tier(capture_dir, args.out, wall_method=args.wall_method)
         else:
             output = run_media_tier(
-                args.input,
+                capture_dir,
                 args.out,
                 args.tier,
                 args.ref_length_m,
@@ -523,7 +534,7 @@ def main() -> None:
                 use_colmap=not args.no_colmap,
             )
         json_path = _emit(
-            output, args.out, args.input.name if args.tier == "lidar" else f"{args.input.name}_{args.tier}"
+            output, args.out, capture_dir.name if args.tier == "lidar" else f"{capture_dir.name}_{args.tier}"
         )
 
     print(f"wrote {json_path}")

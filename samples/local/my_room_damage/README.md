@@ -20,7 +20,7 @@ Committed evidence: `benchmark/damage/my_room_damage_photo.json` (+ plan PNG).
 ## Run
 
 ```bash
-.venv/bin/python run.py --input samples/my_room_damage --tier photo --no-colmap --out out/damage
+.venv/bin/python run.py --input samples/local/my_room_damage --tier photo --no-colmap --out out/damage
 ```
 
 ## Status

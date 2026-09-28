@@ -12,7 +12,7 @@ Not a Stray Scanner LiDAR capture.
 | Floor area | ≈ **11.66 m²** |
 | South openings | door **0.88 m**, passage **0.77 m** |
 
-Adjacent **bedroom**: `samples/my_bedroom` (photos + video). Tape 1.95 m × 2.43 m, door 0.88 m to hall (`room_id=my_bedroom` in GT).
+Adjacent **bedroom**: `samples/local/my_bedroom` (photos + video). Tape 1.95 m × 2.43 m, door 0.88 m to hall (`room_id=my_bedroom` in GT).
 
 ## Capture notes
 - Primary set: windows without curtains blocking.

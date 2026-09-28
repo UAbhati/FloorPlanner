@@ -50,7 +50,7 @@ fix_loop/           Declaration + regenerable before/after
 
 **Photo / video path.** Prefer COLMAP SfM scaled by a reference length when the reconstruction clears an internal point gate. On Android hall/bedroom captures COLMAP is typically too thin; we fall back to a **tape- or GT-anchored axis-aligned rectangle** and widen wall CIs to the tier budget (±8% photo, ±3% video). Stray folders at photo/video tier reuse the **same metric cloud** as LiDAR with those wider CIs — so walk-in can exercise all three tiers from one export.
 
-**Output.** Every run emits schema-valid JSON (`rooms[]`, `stitched_plan`, `drift_correction`) and a rendered plan. Damage/scope are rule-based (`water_stain` compact dark patches, `surface_crack` elongated marks, plus `concealed_behind_opening`); they satisfy the contract without claiming vision-grade damage detection. Staged two-class capture: `samples/my_room_damage/` (evidence in `benchmark/damage/`).
+**Output.** Every run emits schema-valid JSON (`rooms[]`, `stitched_plan`, `drift_correction`) and a rendered plan. Damage/scope are rule-based (`water_stain` compact dark patches, `surface_crack` elongated marks, plus `concealed_behind_opening`); they satisfy the contract without claiming vision-grade damage detection. Staged two-class capture: `samples/local/my_room_damage/` (evidence in `benchmark/damage/`).
 
 ---
 
@@ -132,7 +132,7 @@ Footprint is identical (sum of room areas: 11.6644 hall + 4.7385 bedroom + 3.735
 5. **Mirrors / glass / closed doors** → holes or missed openings; protocol says avoid linger / open doors for the opening gate.
 6. **Stitch from GT rectangles** — adjacency and drift ablation are real; independent photo-only SfM stitch is not.
 7. **Damage** — rule heuristics only; not a scored vision system.
-8. **Benchmark composition gaps** — staged two-class damage room now covered (`my_room_damage`). Technical report currently under the 6-page budget and should be expanded. Samples folder still flat (rearrange TODO).
+8. **Samples UX / report depth** — `samples/stray/` vs `samples/local/` drop zones shipped; technical report still under the 6-page budget and should be expanded.
 
 ---
 

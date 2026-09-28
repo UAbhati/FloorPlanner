@@ -1,6 +1,6 @@
 """Sanity check for the Stray Scanner loader against a real sample capture.
 
-Not a hermetic unit test: it reads from samples/single_room, which is
+Not a hermetic unit test: it reads from samples/stray/single_room, which is
 gitignored and provided locally, not committed. Run manually:
 
     python tests/test_stray_scanner_loader.py
@@ -11,13 +11,15 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 
+from capture_io.sample_paths import resolve_capture_dir  # noqa: E402
 from capture_io.stray_scanner import load_stray_capture  # noqa: E402
 
 
 def main() -> None:
-    sample_root = REPO_ROOT / "samples" / "single_room"
-    if not sample_root.exists():
-        print(f"skip: sample not found at {sample_root}")
+    try:
+        sample_root = resolve_capture_dir("samples/single_room", repo_root=REPO_ROOT)
+    except FileNotFoundError:
+        print("skip: sample not found under samples/stray/single_room")
         return
 
     capture = load_stray_capture(sample_root)

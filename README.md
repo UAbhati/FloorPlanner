@@ -97,7 +97,7 @@ python run.py --input ./anyroom --tier photo --ref-length-m 3.5
 
 Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (cold CLI).
 
-**Photo count note:** the brief allows 2–8 stills. COLMAP needs ≥3 views — exactly 2 fails closed with a clear error. Use 8 overlapping stills when you can.
+**Photo count note:** **3–8 stills recommended.** Assignment allows 2–8; exactly 2 is accepted as an attempt but fails SfM closed (≥3 overlapping views required).
 ## What’s in git vs what you drop in
 
 I left raw capture media out of the repo — too big, and my own rooms are private.

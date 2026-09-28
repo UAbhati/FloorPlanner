@@ -54,9 +54,9 @@ python run.py --input ~/Desktop/walkin_room --tier lidar --out out/
 ## Photo walk (phone camera only)
 
 **Counts (keep these straight):**
-- Assignment floor: **2–8** stills per room.
-- Pipeline SfM needs **≥3** overlapping views; exactly **2** photos will fail closed (honest).
-- Recommended for a reliable reconstruct: **8** overlapping stills (~30% overlap), floor + ceiling tilts.
+- **3–8 stills recommended** (~30% overlap, floor + ceiling tilts).
+- Assignment allows **2–8**; **2** stills are accepted as an attempt but usually lack enough views for SfM and **fail closed**.
+- Pipeline needs **≥3** overlapping views for a successful photo run.
 
 1. One folder per room; stills in `photos/` or loose in the folder.
 2. Pull curtains aside so wall/window frames are visible.

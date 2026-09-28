@@ -472,7 +472,7 @@ def main() -> None:
         ),
         ("stray_room_lidar", ["--input", "samples/stray/single_room", "--tier", "lidar"]),
         ("stray_floor_lidar", ["--input", "samples/stray/single_scan_floor", "--tier", "lidar"]),
-        # Author phone rooms: explicit tape scale (no silent GT CSV). Skip if media absent.
+        # My Android photo/video rooms: explicit tape scale. Skip if media absent.
         (
             "my_room_photo",
             [

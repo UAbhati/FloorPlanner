@@ -26,9 +26,11 @@ from reconstruction.room_polygon import (  # noqa: E402
 
 def main() -> None:
     sample_name = sys.argv[1] if len(sys.argv) > 1 else "single_scan_with_ceiling"
-    sample_root = REPO_ROOT / "samples" / sample_name
+    sample_root = REPO_ROOT / "samples" / "stray" / sample_name
     if not sample_root.exists():
-        print(f"skip: sample not found at {sample_root}")
+        sample_root = REPO_ROOT / "samples" / sample_name
+    if not sample_root.exists():
+        print(f"skip: sample not found at samples/stray/{sample_name}")
         return
 
     capture = load_stray_capture(sample_root)

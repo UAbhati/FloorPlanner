@@ -2,7 +2,7 @@
   "capture_id": "single_scan_with_ceiling",
   "tier": "lidar",
   "device": "iPhone Pro-class (LiDAR, via Stray Scanner)",
-  "generated_at": "2026-09-27T12:09:01.528352+00:00",
+  "generated_at": "2026-09-28T18:12:14.730164+00:00",
   "rooms": [
     {
       "id": "room_0",
@@ -204,7 +204,7 @@
       "ci_high_m": 32.93277940452823,
       "confidence_level": 0.95
     },
-    "rendered_plan_path": "/Users/ubaidahmed/Documents/personal/assignment/fix_loop/after/single_scan_with_ceiling_plan.png"
+    "rendered_plan_path": "/Users/ubaidahmed/Documents/personal/floorPlanner/fix_loop/after/single_scan_with_ceiling_plan.png"
   },
   "drift_correction": {
     "method_used": "poses_as_is",

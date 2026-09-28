@@ -1,13 +1,17 @@
 """Synthetic-image checks for the two visual damage classes + concealed rule."""
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 import cv2
 import numpy as np
 
-from reconstruction.damage import detect_damage_from_photos
-from reconstruction.media_layout import rectangle_room
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from reconstruction.damage import detect_damage_from_photos  # noqa: E402
+from reconstruction.media_layout import rectangle_room  # noqa: E402
 
 
 def _write_stain_photo(path: Path) -> None:

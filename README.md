@@ -98,10 +98,12 @@ Defense: follow [docs/CAPTURE_PROTOCOL.md](docs/CAPTURE_PROTOCOL.md) literally (
 ## Multi-room stitch (GT rectangles; needs author `samples/local/` or just browse committed stitch JSON)
 
 ```bash
-# Opening-anchored placement (drift correction ON)
-python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out out/stitch
-# Ablation (drift OFF)
-python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align off --out out/stitch
+# Hub + satellites (3+ rooms). Default hub = largest floor area.
+python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
+  --hub my_room --drift-align on --out out/stitch
+# Ablation (opening centers not aligned)
+python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
+  --drift-align off --out out/stitch
 ```
 
 Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
@@ -118,6 +120,7 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 ## Honest limits
 - LiDAR: Manhattan density-peak rectangle; falls back to polar then hull; `*_large` / low_confidence = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
-- Author Android photo/video: COLMAP often too thin → tape-scaled rectangle with tier CIs (disclosed).
-- Multi-room stitch: GT hall+bedroom+kitchen via `--stitch-gt`; not independent multi-room LiDAR from a cold Stray walk.
+- Photo/video: COLMAP SfM (default 100 frames); fails honestly if reconstruction is thin — no silent GT-rectangle substitute (`--no-colmap` is ablation-only). Scale via `--ref-from` (LiDAR golden) or `--ref-length-m`.
+- COLMAP area/aspect is frame-set sensitive; short Stray clips can pass at 100 frames and regress at 150 — treat as tuning, not a settled gate.
+- Multi-room stitch: GT hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
 - Author `samples/local/my_*` media is private; Stray media you already have — drop under `samples/stray/`.

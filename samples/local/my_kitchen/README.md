@@ -20,8 +20,8 @@ Door on the west wall of `my_room` / east wall of `my_kitchen`.
 
 ## Run
 ```bash
-python run.py --input samples/local/my_kitchen --tier photo --no-colmap --out out/
-python run.py --input samples/local/my_kitchen --tier video --no-colmap --out out/
+python run.py --input samples/local/my_kitchen --tier photo --out out/
+python run.py --input samples/local/my_kitchen --tier video --out out/
 # Stitch all three rooms (hall is the star center; bedroom south, kitchen west)
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out out/stitch
 ```

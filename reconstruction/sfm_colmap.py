@@ -7,8 +7,7 @@ Metric scale is recovered by fitting the same polar/oriented-rect room polygon
 used on LiDAR, then scaling so the longer wall matches ``ref_length_m``.
 
 If COLMAP fails (too few images, no GPU, degenerate motion), raises
-``SfMError`` so the caller can fail honestly (or run ``--no-colmap`` for
-explicit GT-rectangle benchmark ablations).
+``SfMError`` so the caller can fail honestly.
 """
 from __future__ import annotations
 

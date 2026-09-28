@@ -5,8 +5,7 @@ Photo/video production path uses COLMAP SfM scaled by one reference length
 length). GT is a *scale reference* (and opening enrichment), not a silent
 fallback when SfM fails.
 
-``rectangle_room`` remains for ``--no-colmap`` benchmark ablations and for
-stitching GT rooms (``--stitch-gt``).
+``rectangle_room`` remains for stitching GT rooms (``--stitch-gt``).
 """
 from __future__ import annotations
 

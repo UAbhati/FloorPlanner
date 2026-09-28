@@ -12,9 +12,9 @@ Usage:
   photo  — photos/ or loose stills
   video  — video.mp4 / rgb.mp4 / *.mp4
 
-Default output: ``out/<folder_name>/``. Photo/video need metric scale via
-``--ref-length-m``, ``--ref-from`` (LiDAR JSON), or benchmark/ground_truth.csv.
-Use ``--no-colmap`` only for GT-rectangle ablations.
+Default output: ``out/<folder_name>/``. Photo/video always run COLMAP SfM and
+need metric scale via ``--ref-length-m``, ``--ref-from`` (LiDAR JSON), or
+benchmark/ground_truth.csv. Fail honestly if SfM is too thin.
 """
 from __future__ import annotations
 
@@ -42,7 +42,7 @@ from reconstruction.damage import (  # noqa: E402
     detect_damage_from_photos,
     empty_damage_for_lidar,
 )
-from reconstruction.media_layout import load_ground_truth, rectangle_room  # noqa: E402
+from reconstruction.media_layout import load_ground_truth  # noqa: E402
 from reconstruction.planes import (  # noqa: E402
     find_floor,
     find_floor_and_ceiling,
@@ -312,11 +312,10 @@ def run_media_tier(
     ref_length_m: float | None,
     ref_width_m: float | None,
     *,
-    use_colmap: bool = True,
     colmap_frames: int = DEFAULT_COLMAP_FRAMES,
     ref_from: Path | None = None,
 ) -> dict:
-    """Photo/video tier via COLMAP (or explicit ``--no-colmap`` GT rectangle).
+    """Photo/video tier via COLMAP SfM (fails honestly if reconstruction is thin).
 
     LiDAR depth is never used here — even if the folder is a full Stray export.
     For LiDAR, use ``--tier lidar``. For COLMAP tests on Stray RGB, use the
@@ -326,9 +325,7 @@ def run_media_tier(
 
     gt = load_ground_truth(GT_PATH, capture_dir.name)
     length, length_src = _resolve_ref_length(capture_dir, ref_length_m, ref_from)
-    width = ref_width_m if ref_width_m is not None else (gt.width_m if gt else None)
     ceiling_m = gt.ceiling_height_m if gt else None
-    openings = gt.openings if gt else []
     scale_src_parts: list[str] = []
     if length_src:
         scale_src_parts.append(length_src)
@@ -337,68 +334,51 @@ def run_media_tier(
     elif gt and gt.width_m is not None:
         scale_src_parts.append("gt_width")
 
-    room: RoomPolygon | None = None
-    ceiling = None
+    if length is None:
+        raise SystemExit(
+            "photo/video COLMAP needs one reference length for metric scale.\n"
+            "Pass --ref-length-m, --ref-from <lidar_json_or_dir>, or a matching "
+            f"row in benchmark/ground_truth.csv.\ncapture_dir={capture_dir}"
+        )
+    if len(images) < 3:
+        raise SystemExit(
+            _colmap_failure_message(
+                SfMError(f"need >= 3 images for SfM, got {len(images)}"),
+                images=images,
+                capture_dir=capture_dir,
+                tier=tier,
+            )
+        )
 
-    if use_colmap:
-        if length is None:
-            raise SystemExit(
-                "photo/video COLMAP needs one reference length for metric scale.\n"
-                "Pass --ref-length-m, --ref-from <lidar_json_or_dir>, or a matching "
-                f"row in benchmark/ground_truth.csv.\ncapture_dir={capture_dir}"
+    workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
+    try:
+        matcher = "auto"
+        sfm = reconstruct_metric_room(
+            images, workspace, ref_length_m=length, matcher=matcher
+        )
+        room = sfm.room
+        sfm_notes = sfm.notes
+        ceiling = None
+        if sfm.ceiling_height_m is not None:
+            frac = TIER_WALL_FRAC[tier]
+            h = sfm.ceiling_height_m
+            pad = max(h * frac, 0.15 if sfm.ceiling_source == "plane" else 0.5)
+            ceiling = measurement(h, h - pad, h + pad)
+        media_note = f"{media_note}; colmap_ok matcher={matcher}"
+    except SfMError as exc:
+        raise SystemExit(
+            _colmap_failure_message(
+                exc, images=images, capture_dir=capture_dir, tier=tier
             )
-        if len(images) < 3:
-            raise SystemExit(
-                _colmap_failure_message(
-                    SfMError(f"need >= 3 images for SfM, got {len(images)}"),
-                    images=images,
-                    capture_dir=capture_dir,
-                    tier=tier,
-                )
-            )
-        workspace = out_dir / f"{capture_dir.name}_{tier}_colmap"
-        try:
-            # auto: exhaustive for ≤150 frames (better coverage); sequential for denser sets.
-            matcher = "auto"
-            sfm = reconstruct_metric_room(
-                images, workspace, ref_length_m=length, matcher=matcher
-            )
-            room = sfm.room
-            sfm_notes = sfm.notes
-            if sfm.ceiling_height_m is not None:
-                frac = TIER_WALL_FRAC[tier]
-                h = sfm.ceiling_height_m
-                pad = max(h * frac, 0.15 if sfm.ceiling_source == "plane" else 0.5)
-                ceiling = measurement(h, h - pad, h + pad)
-            media_note = f"{media_note}; colmap_ok matcher={matcher}"
-        except SfMError as exc:
-            raise SystemExit(
-                _colmap_failure_message(
-                    exc, images=images, capture_dir=capture_dir, tier=tier
-                )
-            ) from exc
-        method_note = f"method=colmap_sfm; scale_source={'+'.join(scale_src_parts)}; {sfm_notes}"
-        if ceiling is None:
-            if ceiling_m is not None:
-                frac = TIER_WALL_FRAC[tier]
-                ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
-            else:
-                ceiling = measurement(2.5, 1.5, 3.5)
-    else:
-        # Explicit --no-colmap: GT/CLI rectangle for benchmark ablations only.
-        if length is None or width is None:
-            raise SystemExit(
-                "--no-colmap requires both length and width "
-                "(--ref-length-m/--ref-width-m or ground_truth.csv).\n"
-                f"capture_dir={capture_dir}"
-            )
-        room = rectangle_room(length, width, ceiling_m, openings, low_confidence=False)
+        ) from exc
+
+    method_note = f"method=colmap_sfm; scale_source={'+'.join(scale_src_parts)}; {sfm_notes}"
+    if ceiling is None:
         if ceiling_m is not None:
-            frac = 0.08 if tier == "photo" else 0.03
+            frac = TIER_WALL_FRAC[tier]
             ceiling = measurement(ceiling_m, ceiling_m * (1 - frac), ceiling_m * (1 + frac))
         else:
             ceiling = measurement(2.5, 1.5, 3.5)
-        method_note = f"method=ref_rectangle; scale_source={'+'.join(scale_src_parts) or 'cli'}"
 
     out_dir.mkdir(parents=True, exist_ok=True)
     plan_path = out_dir / f"{capture_dir.name}_{tier}_plan.png"
@@ -429,6 +409,7 @@ def run_media_tier(
             "notes": notes,
         },
     }
+
 
 
 def run_stitch_gt(
@@ -529,11 +510,6 @@ def main() -> None:
         type=Path,
         default=None,
         help="LiDAR golden JSON file or dir — longest wall used as COLMAP scale",
-    )
-    parser.add_argument(
-        "--no-colmap",
-        action="store_true",
-        help="skip COLMAP; use GT/CLI rectangle (benchmark ablations only)",
     )
     parser.add_argument(
         "--colmap-frames",
@@ -651,7 +627,6 @@ def main() -> None:
                 args.tier,
                 args.ref_length_m,
                 args.ref_width_m,
-                use_colmap=not args.no_colmap,
                 colmap_frames=args.colmap_frames,
                 ref_from=args.ref_from,
             )

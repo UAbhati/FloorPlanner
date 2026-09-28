@@ -13,10 +13,10 @@ Uses the same tape GT as `my_bedroom` via `GT_ROOM_ALIASES` in
 
 ## Run
 ```bash
-python run.py --input samples/local/my_bedroom --tier photo --no-colmap --out out/
-python run.py --input samples/local/my_bedroom_repeat --tier photo --no-colmap --out out/
-python run.py --input samples/local/my_bedroom --tier video --no-colmap --out out/
-python run.py --input samples/local/my_bedroom_repeat --tier video --no-colmap --out out/
+python run.py --input samples/local/my_bedroom --tier photo --out out/
+python run.py --input samples/local/my_bedroom_repeat --tier photo --out out/
+python run.py --input samples/local/my_bedroom --tier video --out out/
+python run.py --input samples/local/my_bedroom_repeat --tier video --out out/
 ```
 
 Compare wall lengths / ceiling across the pair; see `benchmark/REPORT.md`

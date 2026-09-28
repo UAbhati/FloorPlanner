@@ -20,7 +20,7 @@
 | Drift ≠ poses_as_is | `--drift-align on` → `plane_anchored_correction`; off ablation | Done for stitch path |
 | Repeatability second capture | [samples/local/my_bedroom_repeat/](../samples/local/my_bedroom_repeat/), [benchmark/REPORT.md](../benchmark/REPORT.md) § Repeatability | Done (photo+video; ref_rectangle / disclosed bias) |
 | Technical report ≤6 pages | [TECHNICAL_REPORT.md](../TECHNICAL_REPORT.md) | Done |
-| Independent COLMAP metric photo | — | Fail on all 3 rooms (fallback; documented per-room) |
+| Independent COLMAP photo/video | `reconstruction/sfm_colmap.py`, Stray `*_rgb` | Done on company Stray (±5% short-wall). Author `my_*` needs denser video; fails honestly if thin. |
 | Raw benchmark data | GT CSV, per-room JSON + rendered plans, H2H app exports — all in git | Done for measurements/evidence. **Raw media not in git:** company Stray exports → drop into `samples/stray/` (you already have them); author `samples/local/my_*` kept private. See [samples/README.md](../samples/README.md). |
 | Process evidence | git log | Ongoing |
 | Decision log | `memory.md` (local, gitignored — working scratch, not a deliverable) | Done locally |

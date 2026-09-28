@@ -49,7 +49,7 @@ fix_loop/            Declaration + regenerable before/after
 
 **LiDAR path (centimetre ambition).** Fuse a confidence-gated, voxel-downsampled cloud from Stray depth + poses → fit **floor** (largest RANSAC plane) → up-axis → **ceiling** only among points ≥ ~1.8 m above floor, reject heights &lt; 1.7 m (furniture) → mid-height wall band → **Manhattan density-peak rectangle** (Hough angle mod 90°, per-axis histogram-mode on coverage-deduped cells; fallback polar outline, then hull) → gap openings → JSON + plan PNG. Ceiling soft-fail: residential prior CI (1.5–3.5 m) + explicit note — never a silent fake 0.
 
-**Photo / video path.** Prefer COLMAP scaled by a reference length when plane-inliers clear ≥500. On our Android rooms COLMAP is too thin → **tape/GT axis-aligned rectangle** with tier CIs (±8% photo, ±3% video). Stray at photo/video reuses the LiDAR metric cloud with those wider CIs so one export exercises all three tiers.
+**Photo / video path.** Photo/video always run COLMAP scaled by a reference length (`--ref-from` or `--ref-length-m`). Company Stray RGB siblings pass short-wall ±5% vs LiDAR golden. Sparse Android clips fail honestly if SfM is too thin (no GT-rectangle bypass).
 
 **Damage / scope.** Rule-based: compact dark → `water_stain`; elongated (aspect ≥4) → `surface_crack`; openings → `concealed_moisture_risk`. Staged room `samples/local/my_room_damage/` (evidence `benchmark/damage/`). Extents assume ~3 m wall span — approximate.
 
@@ -72,7 +72,7 @@ fix_loop/            Declaration + regenerable before/after
 | `single_scan_with_ceiling` | lidar | ~4.8 | Fix-loop capture |
 | same export | photo / video | ~11–12 | Same metric cloud; wider CIs |
 | `single_room` / `single_scan_floor` | lidar | ~2.5–2.7 | |
-| `my_*` phone rooms | photo / video | ~0.8–1.2 | `--no-colmap` ref-rectangle |
+| `my_*` phone rooms | photo / video | varies | COLMAP when dense enough; else fail honestly |
 | 3-room stitch on/off | photo | ~0.8 each | GT rectangles |
 
 **Why intervals widen.** Photo has no depth/poses; video has motion but still no metric scale without SfM or tape. Publishing tight CIs on the tape-rectangle path would be “confident garbage.” Tier fractions are applied uniformly to walls (and scaled to area). Ceiling uses plane-fit uncertainty when a ceiling plane succeeds; otherwise the prior band above.

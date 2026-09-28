@@ -396,23 +396,24 @@ def main() -> None:
         ("stray_ceiling_video", ["--input", "samples/stray/single_scan_with_ceiling", "--tier", "video"]),
         ("stray_room_lidar", ["--input", "samples/stray/single_room", "--tier", "lidar"]),
         ("stray_floor_lidar", ["--input", "samples/stray/single_scan_floor", "--tier", "lidar"]),
-        ("my_room_photo", ["--input", "samples/local/my_room", "--tier", "photo", "--no-colmap"]),
-        ("my_room_video", ["--input", "samples/local/my_room", "--tier", "video", "--no-colmap"]),
-        ("my_bedroom_photo", ["--input", "samples/local/my_bedroom", "--tier", "photo", "--no-colmap"]),
-        ("my_bedroom_video", ["--input", "samples/local/my_bedroom", "--tier", "video", "--no-colmap"]),
+        # Author phone rooms: live COLMAP (no GT-rectangle bypass). Skip if media absent.
+        ("my_room_photo", ["--input", "samples/local/my_room", "--tier", "photo"]),
+        ("my_room_video", ["--input", "samples/local/my_room", "--tier", "video"]),
+        ("my_bedroom_photo", ["--input", "samples/local/my_bedroom", "--tier", "photo"]),
+        ("my_bedroom_video", ["--input", "samples/local/my_bedroom", "--tier", "video"]),
         (
             "my_bedroom_repeat_photo",
-            ["--input", "samples/local/my_bedroom_repeat", "--tier", "photo", "--no-colmap"],
+            ["--input", "samples/local/my_bedroom_repeat", "--tier", "photo"],
         ),
         (
             "my_bedroom_repeat_video",
-            ["--input", "samples/local/my_bedroom_repeat", "--tier", "video", "--no-colmap"],
+            ["--input", "samples/local/my_bedroom_repeat", "--tier", "video"],
         ),
-        ("my_kitchen_photo", ["--input", "samples/local/my_kitchen", "--tier", "photo", "--no-colmap"]),
-        ("my_kitchen_video", ["--input", "samples/local/my_kitchen", "--tier", "video", "--no-colmap"]),
+        ("my_kitchen_photo", ["--input", "samples/local/my_kitchen", "--tier", "photo"]),
+        ("my_kitchen_video", ["--input", "samples/local/my_kitchen", "--tier", "video"]),
         (
             "my_room_damage_photo",
-            ["--input", "samples/local/my_room_damage", "--tier", "photo", "--no-colmap"],
+            ["--input", "samples/local/my_room_damage", "--tier", "photo"],
         ),
         (
             "stitch_photo_drift_on",

@@ -23,7 +23,7 @@ folder with `--ref-length-m` / `--ref-width-m` — see [`../README.md`](../READM
 ## If you are the author regenerating locally
 
 ```bash
-python run.py --input samples/local/my_room --tier photo --no-colmap --out out/
+python run.py --input samples/local/my_room --tier photo --out out/
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo --drift-align on --out out/stitch
 python benchmark/run_benchmark.py
 ```

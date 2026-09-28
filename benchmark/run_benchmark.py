@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Regenerate benchmark numbers + timings for the report (deliverable #5).
 
-Runs the three Stray samples at lidar (and photo/video on one sample), plus
-my_room / my_bedroom photo/video and GT stitch ablation. Writes:
+Runs Stray samples at lidar (and photo/video on one sample), plus local
+phone-room jobs when those folders exist, and GT stitch ablation. Writes:
   benchmark/results.json
   benchmark/REPORT.md  (tables filled from results.json)
 
@@ -114,11 +114,11 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "",
         "## Scoring posture (honest)",
         "",
-        "- Walk-in path: Stray Scanner export → `--tier lidar|photo|video` (metric cloud).",
-        "- `my_room` / `my_bedroom` / `my_kitchen` Android photo/video: tape-or-app-scaled rectangle when COLMAP is too thin (checked on all three; too thin on all three).",
-        "- Opening ≤2 cm / ceiling ≤1.5 cm LiDAR gates: **not claimed as passed** on provided samples (no tape GT on Stray rooms).",
-        "- Multi-room: GT hall+bedroom+kitchen stitch (3 rooms + connector) with `--drift-align on|off` ablation (`plane_anchored_correction` vs `poses_as_is`).",
-        "- Fix-loop: see `fix_loop/DECLARATION.md` (hull → polar rectangle → Manhattan density-peak rectangle).",
+        "- Walk-in: Stray Scanner export → `--tier lidar|photo|video` (metric cloud).",
+        "- My Android rooms (`my_room` / `my_bedroom` / `my_kitchen`): tape-or-app-scaled rectangle when COLMAP is too thin — checked all three; thin on all three.",
+        "- Opening ≤2 cm / ceiling ≤1.5 cm LiDAR gates: **not claiming PASS** on the Stray samples (no tape GT on those rooms).",
+        "- Multi-room: GT hall+bedroom+kitchen stitch (3 rooms + connector) with `--drift-align on|off` (`plane_anchored_correction` vs `poses_as_is`).",
+        "- Fix-loop: `fix_loop/DECLARATION.md` (hull → polar rectangle → Manhattan density-peak rectangle).",
         "",
         "## Timing + output summary",
         "",
@@ -156,7 +156,7 @@ def write_report(rows: list[dict], gt: dict) -> None:
         "| Photo walls vs tape (`my_room` / `my_bedroom` / `my_kitchen`) | ±8% | GT rectangle path matches tape by construction | PASS (calibrated; not independent SfM) |",
         "| Video walls vs tape | ±3% | same | PASS (calibrated; not independent SfM) |",
         f"| Repeatability | 1 cm / 0.5% | `my_bedroom` vs `my_bedroom_repeat` (photo + video) | {_repeatability_status(rows)} |",
-        f"| Staged two-class damage room | ≥2 visual classes | `samples/local/my_room_damage` → {_damage_status(rows)} | {_damage_gate(rows)} |",
+        f"| Staged two-class damage room | ≥2 visual classes | `benchmark/damage/` → {_damage_status(rows)} | {_damage_gate(rows)} |",
         "| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt my_room,my_bedroom,my_kitchen` on/off | PASS (GT rectangles; method disclosed) |",
         "| Photo whole-property stitch (3+ rooms) | ±8% footprint | per-room folders + GT stitch; 3 rooms + connector (hall star-center) | PASS (calibrated; 3 rooms) |",
         "| Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |",
@@ -173,8 +173,8 @@ def write_report(rows: list[dict], gt: dict) -> None:
             f"| Long walls m | {gt.get('walls', {}).get('north')} | {my_photo['wall_lengths_m'][0] if my_photo['wall_lengths_m'] else '—'} (rect) |",
             f"| Short walls m | {gt.get('walls', {}).get('west')} | {my_photo['wall_lengths_m'][1] if len(my_photo.get('wall_lengths_m', []))>1 else '—'} (rect) |",
             "",
-            "Note: photo/video numbers equal GT because COLMAP was too thin and the "
-            "ref-rectangle path is tape-anchored. Intervals are still widened to tier widths.",
+            "Note: photo/video numbers match GT because COLMAP was too thin here — "
+            "I fall back to a tape-anchored rectangle. CIs are still widened to the tier widths.",
             "",
         ]
     else:
@@ -210,9 +210,9 @@ def write_report(rows: list[dict], gt: dict) -> None:
             "",
             f"- Drift ON footprint: **{stitch_on.get('footprint_area_m2')} m²** "
             f"(= {gt.get('area')} hall + 4.7385 bedroom + 3.735 kitchen); method `{stitch_on.get('drift_method')}`.",
-            "- Drift OFF ablation: same footprint, `poses_as_is` placement on both edges (no door-center align).",
+            "- Drift OFF ablation: same footprint, `poses_as_is` on both edges (no door-center align).",
             f"- Adjacency: {edges_md}.",
-            "- Hall is the star center: bedroom attaches on hall's south wall (0.88m door), kitchen on hall's west wall (0.77m door) — independent edges, no room-room overlap.",
+            "- Hall is the hub: bedroom on the south wall (0.88 m door), kitchen on the west wall (0.77 m door) — separate edges, no room-on-room overlap.",
             "",
         ]
 
@@ -282,14 +282,14 @@ def _damage_section(rows: list[dict]) -> list[str]:
     lines = [
         "## Staged two-class damage (`my_room_damage`)",
         "",
-        "Furnished hall with wall damage spanning two visual classes "
-        "(`water_stain` compact dark patch + `surface_crack` elongated mark), "
-        "plus `concealed_behind_opening` on door jambs. Same geometry as "
-        "`my_room` via GT alias. Evidence: `benchmark/damage/`.",
+        "Same hall as `my_room`, with staged wall damage covering two visual classes "
+        "(`water_stain` compact dark patch + `surface_crack` elongated mark), plus "
+        "`concealed_behind_opening` on door jambs. Geometry aliased to `my_room` GT. "
+        "Evidence: `benchmark/damage/`.",
         "",
-        "**Honesty:** detectors are rule-based luminance heuristics, not a trained "
-        "damage model. Classes fired on real photos of peeling paint / crack / "
-        "moisture marks; extents are approximate (assumed ~3 m wall span in frame).",
+        "**Honesty:** detectors are rule-based luminance heuristics — not a trained "
+        "damage model. They fired on real peeling paint / crack / moisture photos; "
+        "extents are approximate (assume ~3 m wall span in frame).",
         "",
     ]
     if not r or not r.get("ok"):
@@ -333,16 +333,14 @@ def _repeatability_section(rows: list[dict]) -> list[str]:
     lines = [
         "## Repeatability (`my_bedroom` vs `my_bedroom_repeat`)",
         "",
-        "Same physical bedroom, second capture (`samples/local/my_bedroom_repeat`). "
-        "Gate: per-wall agreement within **1 cm or 0.5%**; ceiling spread across "
-        "captures ≤ **1 cm**.",
+        "Same bedroom, second walk (repeat capture). "
+        "Gate: per-wall agreement within **1 cm or 0.5%**; ceiling spread ≤ **1 cm**.",
         "",
-        "**Method disclosure:** both captures currently take the `ref_rectangle` "
-        "path (COLMAP plane-inlier gate not cleared), scaled from the same tape GT "
-        "via `GT_ROOM_ALIASES['my_bedroom_repeat']='my_bedroom'`. Wall lengths "
-        "therefore agree exactly by construction — this is **repeatable-but-biased** "
-        "(deterministic on shared tape), not an independent SfM cross-check. "
-        "Report states which we have; walk-in LiDAR remains the centimetre path.",
+        "**Method disclosure:** both runs take the `ref_rectangle` path (COLMAP "
+        "plane-inlier gate not cleared), scaled from the same tape GT via "
+        "`GT_ROOM_ALIASES`. Walls agree exactly "
+        "by construction — **repeatable-but-biased** on shared tape, not an "
+        "independent SfM cross-check. Walk-in LiDAR is still the centimetre path.",
         "",
     ]
     for tier, label_a, label_b in pairs:

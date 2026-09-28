@@ -6,6 +6,8 @@
 
 **Failing number (regenerable):** on `samples/stray/single_scan_with_ceiling`, convex-hull wall extraction produced **floor area ≈ 115.15 m²** with an 8-vertex non-rectangular polygon (`wall_method=convex_hull`). That is not a usable single-room plan (openings and wall CIs ride on the same wrong boundary).
 
+Committed before artifact: `fix_loop/before/single_scan_with_ceiling.json` (notes: `wall_method=convex_hull; low_confidence=True`).
+
 Reproduce before:
 ```bash
 source .venv/bin/activate
@@ -18,9 +20,9 @@ python run.py --input samples/stray/single_scan_with_ceiling --tier lidar \
 **Hypothesis:** The wall-band point cloud is a **filled** volume (furniture + clutter + doorway bleed), not a thin wall ring. Convex hull of that set is the outer envelope of everything LiDAR saw, not the room walls.
 
 **Evidence:**
-- `NOTES.md` (2026-09-27): hull over wall-band → 115 m²; scatter plot fills the interior.
-- Manhattan 2D line-RANSAC experiment failed to assemble a valid rectangle (`reconstruction/wall_detection.py` history / `memory.md`).
-- Same capture’s ceiling plane fit is healthy (~1.83 m), so the failure is specifically **lateral wall extraction**, not global tracking collapse.
+- Before JSON: 8 walls, area ≈ 115.15 m², `low_confidence=True` — hull of a filled band, not a room outline (`fix_loop/before/single_scan_with_ceiling.json`).
+- Earlier 2D line-RANSAC attempts in `reconstruction/wall_detection.py` failed to assemble a valid rectangle (history in that module’s docstring + git log).
+- Same capture’s ceiling plane fit is healthy (~1.83 m in the before/after JSON notes), so the failure is specifically **lateral wall extraction**, not global tracking collapse.
 
 ## 3. Fix shipped + predicted number
 
@@ -38,6 +40,8 @@ Round 2 (this fix): replaced the primary method with a **Manhattan density-peak 
 | `single_scan_with_ceiling` | 115.2 m², 8-vertex hull | `oriented_rect_large`, **139.3 m²**, low_confidence=True | `manhattan_rect`, **30.5 m²**, low_confidence=**False** |
 | `single_scan_floor` | — | `oriented_rect_large`, **112.9 m²** | `manhattan_rect`, **27.0 m²** |
 | `single_room` | — | `oriented_rect`, **35.1 m²** | `manhattan_rect`, **9.9 m²** |
+
+Committed after artifacts: `fix_loop/after/single_scan_with_ceiling.json`, `fix_loop/after/single_room.json`.
 
 Cross-checked at frame_stride 10/20/30 on both ceiling-covered samples: Manhattan area holds in a 27–33 m² band (not the wild 111–159 m² swing polar/hull showed across the same strides) — the density-peak signal, unlike max-radius, doesn't depend on how many points happen to land on stray doorway-bleed rays.
 

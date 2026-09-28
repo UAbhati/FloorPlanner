@@ -1,6 +1,6 @@
 """Wall / room-polygon detection from a top-down wall-band point cloud.
 
-History (see NOTES.md + memory.md):
+History (fix-loop before/after under ``fix_loop/``):
 - Convex hull of the full wall band over-includes interior clutter (~115 m² junk).
 - Raw 2D line-RANSAC (no global orientation step first) produced invalid,
   non-rectangular quads.

@@ -4,7 +4,7 @@
 **Export date:** 27 September 2026
 **Artifacts:** `benchmark/h2h/app_exports/` (hall + bedroom + kitchen screenshots, property overview, `magicplan_report.pdf`)
 
-**Honest method note:** Android Magicplan has no AR/LiDAR scan. Rooms were drawn and dimensions entered from tape. Our photo tier on `my_room` / `my_bedroom` / `my_kitchen` also uses tape-anchored ref-rectangle when COLMAP is too thin. Head-to-head is therefore **consumer plan export vs our photo output**, both tape-calibrated — not an independent LiDAR bake-off. Disclosed for scoring transparency.
+**How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier on `my_room` / `my_bedroom` / `my_kitchen` also falls back to a tape-anchored rectangle when COLMAP is too thin. So this is **consumer plan export vs my photo output**, both tape-calibrated — not an independent LiDAR bake-off. Stating that up front so the score isn’t misleading.
 
 ## Room A — Hall (`my_room`)
 
@@ -28,11 +28,11 @@ Magicplan PDF: Hall **11.66 m² (2.42 × 4.82)**.
 | Floor area (m²) | 4.739 | 4.739 | 0.000 | 4.740 | 0.001 | Tie |
 | Door to hall | 0.880 | 0.880 | 0.000 | 0.880 | 0.000 | Tie |
 
-Magicplan PDF: Bedroom **4.74 m² (1.95 × 2.43)**. Ours: `benchmark/h2h/our_room_b/`.
+Magicplan PDF: Bedroom **4.74 m² (1.95 × 2.43)**. Mine: `benchmark/h2h/our_room_b/`.
 
 ## Room C — Kitchen (`my_kitchen`, bonus third room)
 
-Only 2 rooms are required by spec; kitchen added since the same Magicplan session captured it as part of the whole-property export (`benchmark/h2h/app_exports/magicplan_kitchen.jpg`, `magicplan_property_overview.jpg`).
+Spec only needs 2 rooms; I added the kitchen because the same Magicplan session already had it in the whole-property export (`benchmark/h2h/app_exports/magicplan_kitchen.jpg`, `magicplan_property_overview.jpg`).
 
 | Dimension | Tape/app GT (m) | Ours photo (m) | Ours \|err\| | Magicplan (m) | App \|err\| | Winner |
 |-----------|-------------|----------------|--------------|---------------|-------------|--------|
@@ -41,7 +41,7 @@ Only 2 rooms are required by spec; kitchen added since the same Magicplan sessio
 | Floor area (m²) | 3.735 | 3.735 | 0.000 | 3.740 | 0.005 | **Ours** (tie within rounding) |
 | Door to hall | 0.770 | 0.770 | 0.000 | 0.770 | 0.000 | Tie |
 
-Magicplan app: Kitchen **3.74 m² (1.66 × 2.25)**. Ours: `benchmark/h2h/our_room_c/`.
+Magicplan app: Kitchen **3.74 m² (1.66 × 2.25)**. Mine: `benchmark/h2h/our_room_c/`.
 
 ## Score
 
@@ -52,9 +52,10 @@ Magicplan app: Kitchen **3.74 m² (1.66 × 2.25)**. Ours: `benchmark/h2h/our_roo
 | Target | ≥ 70% |
 | Required (2-room minimum only) | 9 / 9 = 100% (hall + bedroom alone) |
 
-**Ceiling:** Magicplan export did not list ceiling height; excluded from shared count.
+**Ceiling:** Magicplan export didn’t list ceiling height, so I left it out of the shared count.
 
 ## Regenerable runs
+
 ```bash
 source .venv/bin/activate
 python run.py --input samples/local/my_room --tier photo --out benchmark/h2h/our_room_a

@@ -1,11 +1,10 @@
 """Ground-truth helpers and an explicit GT-rectangle layout for ablations.
 
-Photo/video production path uses COLMAP SfM scaled by one reference length
-(``--ref-length-m``, ``--ref-from`` LiDAR JSON, or ``benchmark/ground_truth.csv``
-length). GT is a *scale reference* (and opening enrichment), not a silent
-fallback when SfM fails.
+Photo/video production path uses COLMAP SfM scaled by ``--ref-length-m`` or
+``--ref-from`` (LiDAR JSON). ``benchmark/ground_truth.csv`` is tape GT for
+validation / ``--stitch-gt`` demos — not a silent fallback when SfM fails.
 
-``rectangle_room`` remains for stitching GT rooms (``--stitch-gt``).
+``rectangle_room`` builds axis-aligned rooms from those GT rows for stitch.
 """
 from __future__ import annotations
 
@@ -27,10 +26,9 @@ class RoomGT:
     openings: list[tuple[str, float, str]]  # wall_id, width_m, notes
 
 
-# Capture folders whose tape GT lives under a different primary room_id.
+# Folder names that reuse another room_id's tape row (repeat / damage captures).
 GT_ROOM_ALIASES: dict[str, str] = {
     "my_bedroom_repeat": "my_bedroom",
-    # Staged-damage walk of the hall — same geometry as my_room.
     "my_room_damage": "my_room",
 }
 

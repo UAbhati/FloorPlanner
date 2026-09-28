@@ -10,7 +10,6 @@ Common layout (optional grouping):
 samples/
   stray/single_room/          # full Stray export (LiDAR golden)
   stray/single_room_rgb/      # rgb.mp4 only — photo/video COLMAP tests
-  local/my_room/              # author phone rooms (privacy)
 ```
 
 Short names still resolve: ``--input single_room`` or ``samples/single_room``

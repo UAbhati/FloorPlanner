@@ -1,7 +1,7 @@
 """Detect floor/ceiling planes and derive ceiling height.
 
-Three approaches were tried, in order, on samples/single_room and
-samples/single_scan_with_ceiling (see NOTES.md for the full story):
+Three approaches were tried, in order, on ``samples/stray/single_room`` and
+``samples/stray/single_scan_with_ceiling``:
 
 1. Histogram peak search on a candidate up-axis. Failed: a handheld walk
    views floor/ceiling from many angles/distances, so wall points spread

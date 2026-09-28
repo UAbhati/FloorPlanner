@@ -14,7 +14,7 @@ from typing import Any
 from reconstruction.room_polygon import Opening, RoomPolygon, Wall
 import numpy as np
 
-# Pass criteria from docs/STRAY_COLMAP_VALIDATION_PLAN.md Phase 4.
+# Compare wall / area within these fractions of the golden reference.
 WALL_ERROR_PASS_FRAC = 0.05  # ±5%
 AREA_ERROR_PASS_FRAC = 0.10  # ±10%
 OPENING_COUNT_TOLERANCE = 1

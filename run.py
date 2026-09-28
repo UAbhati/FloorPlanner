@@ -13,8 +13,9 @@ Usage:
   video  — video.mp4 / rgb.mp4 / *.mp4
 
 Default output: ``out/<folder_name>/``. Photo/video always run COLMAP SfM and
-need metric scale via ``--ref-length-m``, ``--ref-from`` (LiDAR JSON), or
-benchmark/ground_truth.csv. Fail honestly if SfM is too thin.
+need metric scale via ``--ref-length-m`` or ``--ref-from`` (LiDAR JSON).
+Fail honestly if SfM is too thin. ``benchmark/ground_truth.csv`` is for
+``--stitch-gt`` / validation only.
 """
 from __future__ import annotations
 
@@ -337,8 +338,8 @@ def run_media_tier(
     if length is None:
         raise SystemExit(
             "photo/video COLMAP needs one reference length for metric scale.\n"
-            "Pass --ref-length-m, --ref-from <lidar_json_or_dir>, or a matching "
-            f"row in benchmark/ground_truth.csv.\ncapture_dir={capture_dir}"
+            "Pass --ref-length-m <metres> or --ref-from <lidar_json_or_dir>.\n"
+            f"capture_dir={capture_dir}"
         )
     if len(images) < 3:
         raise SystemExit(
@@ -534,7 +535,7 @@ def main() -> None:
         "--stitch-gt",
         type=str,
         default=None,
-        help="comma-separated GT room_ids to stitch (e.g. my_room,my_bedroom,my_kitchen)",
+        help="comma-separated GT room_ids to stitch (from benchmark/ground_truth.csv)",
     )
     parser.add_argument(
         "--hub",

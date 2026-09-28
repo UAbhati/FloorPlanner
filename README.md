@@ -158,8 +158,6 @@ Committed stitch outputs: [`benchmark/h2h/stitched/`](benchmark/h2h/stitched/)
 - [fix_loop/DECLARATION.md](fix_loop/DECLARATION.md) — 25% fix loop
 
 ## Honest limits
-- LiDAR: Manhattan density-peak rectangle; falls back to polar then hull; `*_large` / low_confidence = doorway bleed / multi-space.
 - Ceiling soft-fails when the walk never looks up.
-- Photo/video: COLMAP SfM (default 100 frames). Fails honestly if reconstruction is thin. Scale via `--ref-length-m` (or `--ref-from`).
-- Stray RGB vs LiDAR golden (scaled): short-wall within ±5% on single_room / floor / ceiling with current sparse fit (PCA-up + polar aspect pick).
-- Multi-room stitch: hub + satellites via `--stitch-gt` (not independent multi-room LiDAR from a cold Stray walk).
+- Photo/video COLMAP fails honestly if reconstruction is thin; needs `--ref-length-m` or `--ref-from` for scale.
+- I don’t have an iPhone — LiDAR was validated on company Stray exports, not my own Pro captures; photo/video/H2H are from my Android phone.

@@ -28,7 +28,7 @@ python run.py --input samples/stray/single_scan_with_ceiling --tier lidar \
 
 **Fix (two rounds).**
 
-Round 1 (first pass): polar max-radius outline → oriented min-area rectangle (`fit_room_walls`), with oversized footprints tagged `oriented_rect_large` / low_confidence instead of silently trusting a hull. This turned the 8-vertex hull junk into an honest 4-wall rectangle, but "farthest point per ray" still chases the single farthest doorway-bleed point on any ray that looks through an opening — footprint stayed inflated (115 m² → 139 m², *larger*, not smaller).
+Round 1 (first pass): polar max-radius outline → oriented min-area rectangle (`fit_room_walls`), with oversized footprints tagged `oriented_rect_large` / low_confidence instead of silently trusting a hull. That turned the 8-vertex hull junk into a real 4-wall rectangle, but "farthest point per ray" still chases the single farthest doorway-bleed point on any ray that looks through an opening — footprint stayed inflated (115 m² → 139 m², *larger*, not smaller).
 
 Round 2 (this fix): replaced the primary method with a **Manhattan density-peak rectangle**. Rasterize the wall-band cloud, Hough-vote for the dominant wall direction (mod 90°) instead of fitting a line to a noisy subset, rotate into that frame, and on each of the 2 axes find the *histogram-mode* wall position in the outer part of each half — a physical wall is hit repeatedly across the whole walk (sharp peak); sparse bleed points past an open doorway are not (flat). Build an axis-aligned box from the 4 independent peak positions and rotate back — opposite sides are equal by construction. Falls back to the round-1 polar rect, then hull, if no dominant angle or peak is confident. CLI: `--wall-method auto|manhattan|polar|hull`.
 

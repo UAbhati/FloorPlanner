@@ -62,11 +62,11 @@ If you use these drop zones, short names still resolve
 
 | Path | In GitHub? | Who has the media? |
 |------|------------|--------------------|
-| `samples/stray/single_room` (+ `_rgb`) | **No media** — drop it yourself | Testers (same Stray exports for everyone) |
+| `samples/stray/single_room` (+ `_rgb`) | **No media** — drop it yourself | You (same company Stray exports) |
 | `samples/local/my_*` | **No** (privacy) | Just me |
 | Benchmark JSON / plan PNGs / REPORT / H2H | **Yes** | Everyone |
 
-## Tester setup (company Stray names) — optional
+## Optional: company Stray drop-in names
 
 1. Copy the three full Stray exports into `samples/stray/` (keep the names).
 2. RGB-only siblings for COLMAP:

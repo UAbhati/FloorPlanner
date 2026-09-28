@@ -77,13 +77,13 @@ python run.py --input ~/Desktop/walkin_room --tier lidar --out out/
      --ref-length-m <long_m> --ref-width-m <short_m>
    ```
 
-## Device matrix (honest)
+## Device matrix
 
-| Tier | Assignment target hardware | Also tested / works | Accuracy posture |
-|------|----------------------------|---------------------|------------------|
+| Tier | What the brief asks for | What I actually ran | Accuracy posture |
+|------|-------------------------|---------------------|------------------|
 | LiDAR | iPhone 15 Pro / Pro Max (or other Pro-class) + Stray Scanner | Company Stray exports (I don’t own a Pro) | Tightest CIs; needs ceiling tilts |
-| Video | iPhone 15 or newer | Any recent phone; Stray `rgb.mp4`; **my tests: Android** | ±3% wall CI target |
-| Photo | iPhone 15 or newer | Any recent phone; **my tests: Android** | ±8% wall CI target |
+| Video | iPhone 15 or newer | My Android phone; also Stray `rgb.mp4` | ±3% wall CI target |
+| Photo | iPhone 15 or newer | My Android stills | ±8% wall CI target |
 
 ## What to avoid
 

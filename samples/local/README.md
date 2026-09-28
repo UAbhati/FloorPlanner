@@ -1,11 +1,11 @@
 # samples/local/
 
 My own phone captures for local testing. Gitignored on purpose (privacy) —
-reviewers don’t need this media. Numbers and plans are already under `benchmark/`.
+you don’t need this media. Numbers and plans are already under `benchmark/`.
 
 Tape measurements I use for validation live in
 [`benchmark/ground_truth.csv`](../../benchmark/ground_truth.csv).
-That’s testing/GT only — not a silent fallback when SfM fails.
+That’s testing/GT only — I don’t fall back to it when SfM fails.
 
 | Folder | What it is | Evidence in git |
 |--------|------------|-----------------|
@@ -21,7 +21,7 @@ Skip this folder. Open the committed JSON + plan PNGs and
 [`benchmark/REPORT.md`](../../benchmark/REPORT.md). To run the live pipeline,
 use [`../stray/`](../stray/) or any capture folder — see [`../README.md`](../README.md).
 
-## Regenerating locally (me)
+## Regenerating on my machine
 
 ```bash
 python run.py --input samples/local/my_room --tier video --ref-length-m 4.82 --out out/

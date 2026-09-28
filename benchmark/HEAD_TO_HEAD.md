@@ -1,12 +1,12 @@
 # Head-to-head vs Magicplan (Android)
 
-> **Part 3 status:** the brief asks for **LiDAR-tier output vs a consumer scanning app** on the same rooms. This document is **not that yet** — it is photo-tier vs Magicplan Android (useful engineering evidence). A LiDAR↔app bake-off still needs Pro captures of the same rooms.
+> **Part 3:** the brief wants **my LiDAR tier vs a consumer scanning app** on the same rooms. I don’t have a Pro, so this isn’t that. What I ran instead: my **photo** tier vs Magicplan on Android. Useful for engineering; not the Part 3 bake-off.
 
 **App:** Magicplan (Android)
 **Export date:** 27 September 2026
 **Artifacts:** `benchmark/h2h/app_exports/` (hall + bedroom + kitchen screenshots, property overview, `magicplan_report.pdf`)
 
-**How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier on these rooms needs `--ref-length-m` (tape) for scale when COLMAP runs; thin SfM fails closed (no silent GT rectangle). So this is **consumer plan export vs my photo output**, both tape-informed — not an independent LiDAR bake-off.
+**How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier needs `--ref-length-m` (tape) for scale when COLMAP runs; if SfM is thin I exit with an error (no silent GT rectangle). So this is **their plan export vs my photo output**, both tape-informed — not an independent LiDAR bake-off.
 
 ## Room A — Hall (`my_room`)
 

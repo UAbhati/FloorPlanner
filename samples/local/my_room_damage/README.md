@@ -25,4 +25,4 @@ Committed output: `benchmark/damage/my_room_damage_photo.json` (+ plan PNG).
 
 ## Status
 
-Done — photos in `photos/`. Gate PASS. Rule-based, disclosed as such.
+Done — photos in `photos/`. Gate PASS. Rule-based (not ML) — I say so in the report.

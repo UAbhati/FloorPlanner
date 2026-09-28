@@ -4,14 +4,14 @@ Generated: 2026-09-28T18:05:43.833125+00:00
 
 Regenerate: `python benchmark/run_benchmark.py`
 
-## Scoring posture (honest)
+## How I scored this
 
 - Walk-in: Stray Scanner export → `--tier lidar|photo|video`.
-- Photo/video scale is **only** `--ref-length-m` / `--ref-from` (no silent GT CSV by folder name).
-- My Android rooms: live COLMAP when media present; thin SfM fails closed. Committed H2H under `benchmark/h2h/`.
+- Photo/video scale is **only** `--ref-length-m` / `--ref-from` (I never look up GT CSV by folder name).
+- My Android rooms: live COLMAP when media is present; thin SfM exits with an error. H2H under `benchmark/h2h/`.
 - Opening ≤2 cm / ceiling ≤1.5 cm LiDAR gates: **not claiming PASS** on Stray samples (no tape GT).
-- Multi-room: `--stitch-gt` tape rectangles for drift ablation; `--stitch-inputs` for live prior-run JSONs.
-- No personal iPhone Pro: Part 3 LiDAR↔app and same-room×3 tiers not closed.
+- Multi-room: `--stitch-gt` for tape/drift ablation; `--stitch-inputs` for live prior-run JSONs.
+- I don’t own an iPhone Pro: Part 3 LiDAR↔app and same-room×3 tiers not closed.
 - Fix-loop: `fix_loop/DECLARATION.md` (hull → polar → Manhattan density-peak).
 
 ## Timing + output summary
@@ -47,10 +47,10 @@ Regenerate: `python benchmark/run_benchmark.py`
 | Video walls vs tape | ±3% | live COLMAP + `--ref-length-m` | FAIL (my_room short-wall err 5.9% > 3%; live COLMAP) |
 | Repeatability | 1 cm / 0.5% | `my_bedroom` vs `my_bedroom_repeat` (photo + video) | FAIL (wall[0] Δ=164.90 cm > tol 1.22 cm; wall[1] Δ=83.30 cm > tol 1.00 cm) |
 | Staged two-class damage room | ≥2 visual classes | `benchmark/damage/` → concealed_moisture_risk, surface_crack, water_stain | PASS (rule-based + concealed; committed) |
-| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt` on/off (+ `--stitch-inputs` live path) | PASS (GT ablation disclosed; live CLI shipped) |
+| Multi-room stitch + drift ≠ poses_as_is | required | `--stitch-gt` on/off (+ `--stitch-inputs` live path) | PASS (GT ablation + live CLI) |
 | Photo whole-property stitch (3+ rooms) | ±8% footprint | `--stitch-gt` footprint = tape sum; live `--stitch-inputs` when COLMAP ok | PASS (GT demo); live path available |
-| Fix-loop shipped | before/after | `fix_loop/` | PASS (shape/confidence movement) |
-| Part 3 LiDAR ↔ consumer app | same rooms | photo↔Magicplan only (`HEAD_TO_HEAD.md`) | GAP (no personal Pro) |
+| Fix-loop before/after | before/after | `fix_loop/` | PASS (shape/confidence movement) |
+| Part 3 LiDAR ↔ consumer app | same rooms | photo↔Magicplan only (`HEAD_TO_HEAD.md`) | GAP (I don’t have a Pro) |
 
 ## `my_room` vs tape GT
 
@@ -61,7 +61,7 @@ Regenerate: `python benchmark/run_benchmark.py`
 | Long walls m | 4.82 | 4.82 |
 | Short walls m | 2.42 | 3.058 |
 
-Note: live **COLMAP** with explicit `--ref-length-m` / `--ref-width-m` (no silent GT CSV). Long wall ≈ tape by scale construction; short wall / area are independent SfM estimates — compare honestly to tape below.
+Note: live **COLMAP** with explicit `--ref-length-m` / `--ref-width-m` (no silent GT CSV). Long wall ≈ tape by scale construction; short wall / area are independent SfM estimates — compare to tape below.
 
 ## `my_bedroom` vs tape GT
 

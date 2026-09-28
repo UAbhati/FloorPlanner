@@ -4,7 +4,7 @@
 
 **App:** Magicplan (Android)
 **Export date:** 27 September 2026
-**Artifacts:** `benchmark/h2h/app_exports/` (hall + bedroom + kitchen screenshots, property overview, `magicplan_report.pdf`)
+**Artifacts:** `benchmark/h2h/app_exports/` (hall + bedroom + kitchen screenshots, property overview)
 
 **How to read this:** Android Magicplan has no AR/LiDAR scan — I drew the rooms and typed in tape numbers. My photo tier needs `--ref-length-m` (tape) for scale when COLMAP runs; if SfM is thin I exit with an error (no silent GT rectangle). So this is **their plan export vs my photo output**, both tape-informed — not an independent LiDAR bake-off.
 
@@ -19,7 +19,7 @@
 | Opening passage | 0.770 | 0.770 | 0.000 | 0.770 | 0.000 | Tie |
 | Ceiling | 2.580 | 2.580 | 0.000 | — (not in export) | — | n/a |
 
-Magicplan PDF: Hall **11.66 m² (2.42 × 4.82)**.
+Magicplan: Hall **11.66 m² (2.42 × 4.82)**.
 
 ## Room B — Bedroom (`my_bedroom`)
 
@@ -30,7 +30,7 @@ Magicplan PDF: Hall **11.66 m² (2.42 × 4.82)**.
 | Floor area (m²) | 4.739 | 4.739 | 0.000 | 4.740 | 0.001 | Tie |
 | Door to hall | 0.880 | 0.880 | 0.000 | 0.880 | 0.000 | Tie |
 
-Magicplan PDF: Bedroom **4.74 m² (1.95 × 2.43)**. Mine: `benchmark/h2h/our_room_b/`.
+Magicplan: Bedroom **4.74 m² (1.95 × 2.43)**. Mine: `benchmark/h2h/our_room_b/`.
 
 ## Room C — Kitchen (`my_kitchen`, bonus third room)
 

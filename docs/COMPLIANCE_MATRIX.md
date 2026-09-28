@@ -15,7 +15,7 @@
 | Benchmark GT | [benchmark/ground_truth.csv](../benchmark/ground_truth.csv) | Done — **eval / stitch-gt / report only**; production photo/video scale is `--ref-length-m` / `--ref-from` only |
 | Bedroom / kitchen photo/video | `benchmark/h2h/our_room_b/`, `our_room_c/` | Done (committed results). Raw media local-only |
 | Head-to-head Part 3 (LiDAR vs consumer app) | [benchmark/HEAD_TO_HEAD.md](../benchmark/HEAD_TO_HEAD.md) | **Gap** — current table is photo vs Magicplan Android (useful, not Part 3). Need LiDAR↔app on same rooms |
-| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-gt` | Done for **GT-rectangle composition + drift ablation**. Live photo-folder → reconstruct → stitch **not yet** |
+| Multi-room stitch + adjacency | `reconstruction/stitch.py`, `--stitch-inputs`, `--stitch-gt` | `--stitch-inputs` stitches **live** prior-run JSONs. `--stitch-gt` remains for tape-rectangle drift ablation demos |
 | Drift ≠ poses_as_is | `--drift-align on` / `off` | Done for stitch path |
 | Repeatability | [benchmark/REPORT.md](../benchmark/REPORT.md) § Repeatability | Partial — **repeatable-but-biased** (shared tape scale); disclosed |
 | Same rooms × all 3 tiers | — | **Gap** — phone rooms = photo/video; Stray = LiDAR(+video). No one physical room with independent photo+video+LiDAR yet |

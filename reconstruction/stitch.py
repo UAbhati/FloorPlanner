@@ -1,6 +1,9 @@
 """Multi-room stitching via shared-opening alignment (plane/opening-anchored).
 
-Photo/video whole-property plans use GT/tape rectangles when poses are absent.
+Two entry points:
+- ``stitch_from_rooms`` — live ``RoomPolygon`` dicts (from prior ``run.py`` JSON)
+- ``stitch_from_gt`` — tape/GT rectangles (``--stitch-gt`` demo / ablation)
+
 Drift correction centers matching doorways on a shared wall; ablation
 (``align_openings=False``) packs without door centering.
 
@@ -16,7 +19,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from reconstruction.media_layout import RoomGT, load_ground_truth, rectangle_room
+from reconstruction.media_layout import load_ground_truth, rectangle_room
 from reconstruction.room_polygon import Opening, RoomPolygon, Wall
 
 CARDINAL_TO_WALL_ID = {"south": "wall_0", "east": "wall_1", "north": "wall_2", "west": "wall_3"}
@@ -134,6 +137,71 @@ def stitch_two_rectangles(
     return StitchResult(rooms=rooms, adjacency=adjacency, footprint_area_m2=footprint, method=method, notes=notes)
 
 
+def stitch_from_rooms(
+    rooms: dict[str, RoomPolygon],
+    *,
+    align_openings: bool = True,
+    shared_width_m: float = 0.88,
+    hub_id: str | None = None,
+    wall_gap_m: float = 0.14,
+    fallback_cardinal: str = "south",
+) -> StitchResult:
+    """Stitch 2+ live room polygons into a whole-property plan.
+
+    - 2 rooms: attach the smaller footprint to the larger (hall) south wall.
+    - 3+ rooms: hub + satellites matched by opening width; multiple children
+      on the same hub wall are packed side-by-side with ``wall_gap_m``.
+      If a satellite has no matching opening, it packs on ``fallback_cardinal``.
+    """
+    ids = [r for r in rooms if r]
+    if len(ids) < 2:
+        raise ValueError("stitch_from_rooms needs at least two rooms")
+    if len(ids) == 2:
+        a_id, b_id = ids[0], ids[1]
+        room_a, room_b = rooms[a_id], rooms[b_id]
+        if room_a.floor_area_m2 >= room_b.floor_area_m2:
+            width = _best_shared_width(room_a, room_b, shared_width_m)
+            return stitch_two_rectangles(
+                room_a,
+                room_b,
+                hall_id=a_id,
+                bedroom_id=b_id,
+                shared_width_m=width,
+                align_openings=align_openings,
+            )
+        width = _best_shared_width(room_b, room_a, shared_width_m)
+        return stitch_two_rectangles(
+            room_b,
+            room_a,
+            hall_id=b_id,
+            bedroom_id=a_id,
+            shared_width_m=width,
+            align_openings=align_openings,
+        )
+
+    return stitch_hub_from_rooms(
+        rooms,
+        hub_id=hub_id,
+        align_openings=align_openings,
+        wall_gap_m=wall_gap_m,
+        fallback_cardinal=fallback_cardinal,
+    )
+
+
+def _best_shared_width(hub: RoomPolygon, sat: RoomPolygon, default: float) -> float:
+    """Pick a shared door width from hub/sat openings when possible."""
+    if not hub.openings or not sat.openings:
+        return default
+    best_w, best_err = default, float("inf")
+    for h in hub.openings:
+        for s in sat.openings:
+            err = abs(h.width_m - s.width_m)
+            if err < best_err:
+                best_err = err
+                best_w = float(h.width_m)
+    return best_w
+
+
 def stitch_from_gt(
     gt_csv,
     room_ids: list[str],
@@ -143,49 +211,25 @@ def stitch_from_gt(
     hub_id: str | None = None,
     wall_gap_m: float = 0.14,
 ) -> StitchResult:
-    """Stitch 2+ GT rectangles into a whole-property plan.
-
-    - 2 rooms: attach the smaller footprint to the larger (hall) south wall.
-    - 3+ rooms: hub + satellites matched by opening width; multiple children
-      on the same hub wall are packed side-by-side with ``wall_gap_m``.
-    """
+    """Stitch 2+ GT rectangles into a whole-property plan (``--stitch-gt``)."""
     ids = [r for r in room_ids if r]
     if len(ids) < 2:
         raise ValueError("stitch_from_gt needs at least two room_ids")
-    if len(ids) == 2:
-        a_id, b_id = ids
-        gt_a = load_ground_truth(gt_csv, a_id)
-        gt_b = load_ground_truth(gt_csv, b_id)
-        if gt_a is None or gt_b is None:
-            raise ValueError(f"missing GT for {a_id!r} or {b_id!r} in {gt_csv}")
-        if gt_a.length_m is None or gt_a.width_m is None or gt_b.length_m is None or gt_b.width_m is None:
-            raise ValueError("both rooms need length_m and width_m in GT")
 
-        room_a = rectangle_room(gt_a.length_m, gt_a.width_m, gt_a.ceiling_height_m, gt_a.openings, low_confidence=False)
-        room_b = rectangle_room(gt_b.length_m, gt_b.width_m, gt_b.ceiling_height_m, gt_b.openings, low_confidence=False)
-        if gt_a.length_m >= gt_b.length_m:
-            return stitch_two_rectangles(
-                room_a,
-                room_b,
-                hall_id=a_id,
-                bedroom_id=b_id,
-                shared_width_m=shared_width_m,
-                align_openings=align_openings,
-            )
-        return stitch_two_rectangles(
-            room_b,
-            room_a,
-            hall_id=b_id,
-            bedroom_id=a_id,
-            shared_width_m=shared_width_m,
-            align_openings=align_openings,
+    rooms: dict[str, RoomPolygon] = {}
+    for rid in ids:
+        gt = load_ground_truth(gt_csv, rid)
+        if gt is None or gt.length_m is None or gt.width_m is None:
+            raise ValueError(f"missing GT length/width for {rid!r} in {gt_csv}")
+        rooms[rid] = rectangle_room(
+            gt.length_m, gt.width_m, gt.ceiling_height_m, gt.openings, low_confidence=False
         )
 
-    return stitch_hub_from_gt(
-        gt_csv,
-        ids,
-        hub_id=hub_id,
+    return stitch_from_rooms(
+        rooms,
         align_openings=align_openings,
+        shared_width_m=shared_width_m,
+        hub_id=hub_id,
         wall_gap_m=wall_gap_m,
     )
 
@@ -218,59 +262,49 @@ def _match_satellite_to_hub(
     return best
 
 
-def stitch_hub_from_gt(
-    gt_csv,
-    room_ids: list[str],
+def stitch_hub_from_rooms(
+    rooms: dict[str, RoomPolygon],
     *,
     hub_id: str | None = None,
     align_openings: bool = True,
     wall_gap_m: float = 0.14,
+    fallback_cardinal: str = "south",
 ) -> StitchResult:
-    """General N-room stitch: hub (connector) + satellites matched by doors.
+    """General N-room stitch from live polygons: hub + satellites by doors.
 
     Satellites that share the same hub wall are packed side-by-side along that
-    wall with ``wall_gap_m`` between them (Magicplan-style dividing wall).
+    wall with ``wall_gap_m`` between them. If opening match fails, the satellite
+    packs on ``fallback_cardinal`` without door centering.
     """
-    ids = list(dict.fromkeys(room_ids))
+    ids = list(dict.fromkeys(rooms.keys()))
     if len(ids) < 2:
         raise ValueError("need at least two rooms")
-
-    gts: dict[str, RoomGT] = {}
     for rid in ids:
-        gt = load_ground_truth(gt_csv, rid)
-        if gt is None or gt.length_m is None or gt.width_m is None:
-            raise ValueError(f"missing GT length/width for {rid!r} in {gt_csv}")
-        gts[rid] = gt
+        if rid not in rooms:
+            raise ValueError(f"missing room polygon for {rid!r}")
 
     if hub_id is None:
-        hub_id = max(ids, key=lambda r: (gts[r].length_m or 0) * (gts[r].width_m or 0))
-    if hub_id not in gts:
-        raise ValueError(f"hub_id {hub_id!r} not in room_ids")
+        hub_id = max(ids, key=lambda r: rooms[r].floor_area_m2)
+    if hub_id not in rooms:
+        raise ValueError(f"hub_id {hub_id!r} not in rooms")
 
     satellites = [r for r in ids if r != hub_id]
-    hub_gt = gts[hub_id]
-    hub = rectangle_room(
-        hub_gt.length_m, hub_gt.width_m, hub_gt.ceiling_height_m, hub_gt.openings, low_confidence=False
-    )
+    hub = rooms[hub_id]
 
-    matches: list[tuple[str, str, float, Opening, Opening, RoomPolygon]] = []
+    matches: list[tuple[str, str, float, Opening | None, Opening | None, RoomPolygon]] = []
     used_hub: set[str] = set()
     for sat_id in satellites:
-        sat_gt = gts[sat_id]
-        sat = rectangle_room(
-            sat_gt.length_m, sat_gt.width_m, sat_gt.ceiling_height_m, sat_gt.openings, low_confidence=False
-        )
+        sat = rooms[sat_id]
         m = _match_satellite_to_hub(hub, sat, used_hub)
         if m is None:
-            raise ValueError(
-                f"could not match openings between hub {hub_id!r} and {sat_id!r} "
-                f"(need similar-width openings on opposite walls)"
-            )
+            # No similar-width opposite openings — pack on fallback wall.
+            matches.append((sat_id, fallback_cardinal, 0.0, None, None, sat))
+            continue
         hub_cardinal, shared_w, h_open, s_open = m
         used_hub.add(h_open.id)
         matches.append((sat_id, hub_cardinal, shared_w, h_open, s_open, sat))
 
-    by_wall: dict[str, list[tuple[str, float, Opening, Opening, RoomPolygon]]] = {}
+    by_wall: dict[str, list[tuple[str, float, Opening | None, Opening | None, RoomPolygon]]] = {}
     for sat_id, hub_cardinal, shared_w, h_open, s_open, sat in matches:
         by_wall.setdefault(hub_cardinal, []).append((sat_id, shared_w, h_open, s_open, sat))
 
@@ -282,7 +316,11 @@ def stitch_hub_from_gt(
     notes_parts: list[str] = [f"hub={hub_id}; wall_gap_m={wall_gap_m}"]
 
     for hub_cardinal, group in by_wall.items():
-        group = sorted(group, key=lambda t: t[2].position_on_wall_m)
+        # Prefer opening order when available; else keep insertion order.
+        group = sorted(
+            group,
+            key=lambda t: t[2].position_on_wall_m if t[2] is not None else 0.0,
+        )
         axis = 1 if hub_cardinal in ("south", "north") else 0
         along = 1 - axis
         pmin, pmax = hub.vertices_2d.min(axis=0), hub.vertices_2d.max(axis=0)
@@ -310,7 +348,7 @@ def stitch_hub_from_gt(
             note = f"packed along {hub_cardinal} at {_along_name(along)}={cursor:.2f}m"
             method = "poses_as_is"
 
-            if align_openings:
+            if align_openings and h_open is not None:
                 p_c = _opening_center(hub, h_open)
                 s_open_placed = _pick_opening(
                     placed_sat, CARDINAL_TO_WALL_ID[OPPOSITE_CARDINAL[hub_cardinal]], shared_w
@@ -320,7 +358,6 @@ def stitch_hub_from_gt(
                     shift = p_c[along] - c_c[along]
                     proposed_low = cursor + shift
                     proposed_high = proposed_low + sat_along
-                    # Reserve space for later siblings + gaps so packing stays under hub.
                     later = extents[i + 1 :]
                     reserve = sum(later) + wall_gap_m * len(later)
                     prev_end = cursor - wall_gap_m if sibling_ids else hub_low - wall_gap_m
@@ -341,6 +378,8 @@ def stitch_hub_from_gt(
                             f"opening alignment skipped (Δ={shift:.3f}m would overlap/"
                             f"leave hub on {hub_cardinal})"
                         )
+            elif h_open is None:
+                note = f"no opening match → packed on {hub_cardinal} (fallback)"
 
             placed[sat_id] = placed_sat
             translations[sat_id] = delta
@@ -373,13 +412,41 @@ def stitch_hub_from_gt(
         combined_method = "poses_as_is"
 
     footprint = sum(r.floor_area_m2 for r in placed.values())
-    rooms = [PlacedRoom(room_id=rid, room=placed[rid], translation=translations[rid]) for rid in order]
+    out_rooms = [
+        PlacedRoom(room_id=rid, room=placed[rid], translation=translations[rid]) for rid in order
+    ]
     return StitchResult(
-        rooms=rooms,
+        rooms=out_rooms,
         adjacency=adjacency,
         footprint_area_m2=footprint,
         method=combined_method,
         notes="; ".join(notes_parts),
+    )
+
+
+def stitch_hub_from_gt(
+    gt_csv,
+    room_ids: list[str],
+    *,
+    hub_id: str | None = None,
+    align_openings: bool = True,
+    wall_gap_m: float = 0.14,
+) -> StitchResult:
+    """GT wrapper around ``stitch_hub_from_rooms``."""
+    ids = list(dict.fromkeys(room_ids))
+    rooms: dict[str, RoomPolygon] = {}
+    for rid in ids:
+        gt = load_ground_truth(gt_csv, rid)
+        if gt is None or gt.length_m is None or gt.width_m is None:
+            raise ValueError(f"missing GT length/width for {rid!r} in {gt_csv}")
+        rooms[rid] = rectangle_room(
+            gt.length_m, gt.width_m, gt.ceiling_height_m, gt.openings, low_confidence=False
+        )
+    return stitch_hub_from_rooms(
+        rooms,
+        hub_id=hub_id,
+        align_openings=align_openings,
+        wall_gap_m=wall_gap_m,
     )
 
 

@@ -7,9 +7,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from reconstruction.stitch import stitch_from_gt, stitch_hub_from_gt  # noqa: E402
+from reconstruction.stitch import stitch_from_gt, stitch_from_rooms, stitch_hub_from_gt  # noqa: E402
+from reconstruction.validation import load_output_json, room_polygon_from_output_json  # noqa: E402
 
 GT = REPO / "benchmark" / "ground_truth.csv"
+H2H = REPO / "benchmark" / "h2h"
 
 
 def test_two_room_ablation() -> None:
@@ -67,6 +69,22 @@ def test_hub_auto_picks_largest() -> None:
     assert "hub=my_room" in r.notes
 
 
+def test_stitch_from_live_h2h_json() -> None:
+    """Committed per-room H2H JSON → stitch_from_rooms (same path as --stitch-inputs)."""
+    paths = {
+        "my_room": H2H / "our_room_a" / "my_room_photo.json",
+        "my_bedroom": H2H / "our_room_b" / "my_bedroom_photo.json",
+        "my_kitchen": H2H / "our_room_c" / "my_kitchen_photo.json",
+    }
+    for p in paths.values():
+        assert p.is_file(), p
+    rooms = {rid: room_polygon_from_output_json(load_output_json(p)) for rid, p in paths.items()}
+    result = stitch_from_rooms(rooms, hub_id="my_room", align_openings=True, wall_gap_m=0.14)
+    assert {p.room_id for p in result.rooms} == set(paths)
+    assert abs(result.footprint_area_m2 - (11.664 + 4.739 + 3.735)) < 0.05
+    assert len(result.adjacency) >= 2
+
+
 def main() -> None:
     test_two_room_ablation()
     print("OK two-room ablation")
@@ -74,6 +92,8 @@ def main() -> None:
     print("OK three-room hub (scrambled ids)")
     test_hub_auto_picks_largest()
     print("OK hub auto-pick")
+    test_stitch_from_live_h2h_json()
+    print("OK live H2H JSON stitch")
 
 
 if __name__ == "__main__":

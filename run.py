@@ -15,7 +15,8 @@ Usage:
 Default output: ``out/<folder_name>/``. Photo/video always run COLMAP SfM and
 need metric scale via ``--ref-length-m`` or ``--ref-from`` (LiDAR JSON) — never
 a silent ``ground_truth.csv`` lookup by folder name. Fail honestly if SfM is
-too thin. ``benchmark/ground_truth.csv`` is for ``--stitch-gt`` / evaluation only.
+too thin. ``--stitch-inputs`` stitches live prior-run JSONs;
+``benchmark/ground_truth.csv`` is for ``--stitch-gt`` / evaluation only.
 """
 from __future__ import annotations
 
@@ -58,12 +59,13 @@ from reconstruction.room_polygon import (  # noqa: E402
     project_to_horizontal,
 )
 from reconstruction.sfm_colmap import SfMError, reconstruct_metric_room  # noqa: E402
-from reconstruction.stitch import stitch_from_gt  # noqa: E402
+from reconstruction.stitch import stitch_from_gt, stitch_from_rooms  # noqa: E402
 from reconstruction.validation import (  # noqa: E402
     compare_output_jsons,
     extract_scale_from_lidar_json,
     load_output_json,
     render_comparison_figure,
+    room_polygon_from_output_json,
 )
 
 # Default frames for COLMAP on short clips (~≤60s). Longer videos auto-raise
@@ -425,6 +427,95 @@ def run_stitch_gt(
         hub_id=hub_id,
         wall_gap_m=wall_gap_m,
     )
+    return _emit_stitch_result(
+        result,
+        out_dir,
+        tier,
+        room_ids=room_ids,
+        device="GT rectangles + opening-anchored stitch",
+        source_payloads=None,
+        align_openings=align_openings,
+    )
+
+
+def _resolve_stitch_input_path(raw: str) -> Path:
+    p = Path(raw).expanduser()
+    if p.exists():
+        return p.resolve()
+    cand = (REPO_ROOT / p).resolve()
+    if cand.exists():
+        return cand
+    raise FileNotFoundError(f"stitch input not found: {raw}")
+
+
+def _room_id_from_output(data: dict, path: Path) -> str:
+    room0 = (data.get("rooms") or [{}])[0]
+    return str(data.get("capture_id") or room0.get("name") or path.stem)
+
+
+def run_stitch_inputs(
+    input_specs: list[str],
+    out_dir: Path,
+    tier: str,
+    *,
+    align_openings: bool,
+    hub_id: str | None = None,
+    wall_gap_m: float = 0.14,
+) -> dict:
+    """Stitch live pipeline outputs (JSON or out dirs) — not GT rectangles.
+
+    Example::
+
+        python run.py --stitch-inputs out/hall,out/bedroom,out/kitchen \\
+            --tier photo --hub hall --drift-align on
+    """
+    rooms: dict[str, RoomPolygon] = {}
+    payloads: dict[str, dict] = {}
+    room_ids: list[str] = []
+    for raw in input_specs:
+        path = _resolve_stitch_input_path(raw)
+        data = load_output_json(path)
+        rid = _room_id_from_output(data, path)
+        if rid in rooms:
+            raise SystemExit(f"duplicate room id {rid!r} from stitch input {raw}")
+        poly = room_polygon_from_output_json(data)
+        rooms[rid] = poly
+        payloads[rid] = data
+        room_ids.append(rid)
+
+    if hub_id is not None and hub_id not in rooms:
+        raise SystemExit(
+            f"--hub {hub_id!r} not in stitch inputs {room_ids}. "
+            "Hub must match a capture_id / room name from those JSONs."
+        )
+
+    result = stitch_from_rooms(
+        rooms,
+        align_openings=align_openings,
+        hub_id=hub_id,
+        wall_gap_m=wall_gap_m,
+    )
+    return _emit_stitch_result(
+        result,
+        out_dir,
+        tier,
+        room_ids=room_ids,
+        device="live room JSON + opening-anchored stitch",
+        source_payloads=payloads,
+        align_openings=align_openings,
+    )
+
+
+def _emit_stitch_result(
+    result,
+    out_dir: Path,
+    tier: str,
+    *,
+    room_ids: list[str],
+    device: str,
+    source_payloads: dict[str, dict] | None,
+    align_openings: bool,
+) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     suffix = "drift_on" if align_openings else "drift_off"
     plan_path = out_dir / f"stitched_{'_'.join(room_ids)}_{tier}_{suffix}_plan.png"
@@ -437,18 +528,30 @@ def run_stitch_gt(
 
     rooms_json = []
     for i, placed in enumerate(result.rooms):
-        gt = load_ground_truth(GT_PATH, placed.room_id)
-        ceil_m = gt.ceiling_height_m if gt else None
-        if ceil_m is not None:
-            frac = TIER_WALL_FRAC[tier]
-            ceiling = measurement(ceil_m, ceil_m * (1 - frac), ceil_m * (1 + frac))
-        else:
-            ceiling = measurement(2.5, 1.5, 3.5)
-        room_json = _room_to_json(placed.room, placed.room_id, ceiling, tier)
+        src = (source_payloads or {}).get(placed.room_id)
+        src_room = ((src or {}).get("rooms") or [{}])[0] if src else {}
+        ceil = src_room.get("ceiling_height")
+        if not isinstance(ceil, dict) or ceil.get("value_m") is None:
+            if src is None:
+                # GT path: optional tape ceiling
+                gt = load_ground_truth(GT_PATH, placed.room_id)
+                ceil_m = gt.ceiling_height_m if gt else None
+                if ceil_m is not None:
+                    frac = TIER_WALL_FRAC[tier]
+                    ceil = measurement(ceil_m, ceil_m * (1 - frac), ceil_m * (1 + frac))
+                else:
+                    ceil = measurement(2.5, 1.5, 3.5)
+            else:
+                ceil = measurement(2.5, 1.5, 3.5)
+        room_json = _room_to_json(placed.room, placed.room_id, ceil, tier)
         room_json["id"] = f"room_{i}"
-        damage, scope = empty_damage_for_lidar(placed.room)
-        room_json["damage_regions"] = damage
-        room_json["scope_line_items"] = scope
+        if src_room.get("damage_regions") is not None:
+            room_json["damage_regions"] = src_room["damage_regions"]
+            room_json["scope_line_items"] = src_room.get("scope_line_items") or []
+        else:
+            damage, scope = empty_damage_for_lidar(placed.room)
+            room_json["damage_regions"] = damage
+            room_json["scope_line_items"] = scope
         rooms_json.append(room_json)
 
     area_frac = TIER_AREA_FRAC[tier]
@@ -456,7 +559,7 @@ def run_stitch_gt(
     return {
         "capture_id": "+".join(room_ids),
         "tier": tier,
-        "device": "GT rectangles + opening-anchored stitch (Android Magicplan property)",
+        "device": device,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "rooms": rooms_json,
         "stitched_plan": {
@@ -528,10 +631,16 @@ def main() -> None:
         help="comma-separated GT room_ids to stitch (from benchmark/ground_truth.csv)",
     )
     parser.add_argument(
+        "--stitch-inputs",
+        type=str,
+        default=None,
+        help="comma-separated prior run JSON files or out/ dirs to stitch (live polygons)",
+    )
+    parser.add_argument(
         "--hub",
         type=str,
         default=None,
-        help="for --stitch-gt with 3+ rooms: hub/connector room_id (default: largest area)",
+        help="for stitch with 3+ rooms: hub/connector room_id (default: largest area)",
     )
     parser.add_argument(
         "--wall-gap-m",
@@ -543,7 +652,7 @@ def main() -> None:
         "--drift-align",
         choices=["on", "off"],
         default="on",
-        help="for --stitch-gt: opening-center align (on) vs left-align ablation (off)",
+        help="for stitch: opening-center align (on) vs left-align ablation (off)",
     )
     args = parser.parse_args()
 
@@ -580,7 +689,30 @@ def main() -> None:
     if args.colmap_frames < 3:
         raise SystemExit("--colmap-frames must be >= 3")
 
-    if args.stitch_gt:
+    if args.stitch_gt and args.stitch_inputs:
+        raise SystemExit("use either --stitch-gt or --stitch-inputs, not both")
+
+    if args.stitch_inputs:
+        if args.tier is None:
+            raise SystemExit("--tier is required with --stitch-inputs")
+        specs = [s.strip() for s in args.stitch_inputs.split(",") if s.strip()]
+        if len(specs) < 2:
+            raise SystemExit("--stitch-inputs needs at least two paths")
+        out_dir = args.out or (REPO_ROOT / "out" / "stitched_inputs")
+        try:
+            output = run_stitch_inputs(
+                specs,
+                out_dir,
+                args.tier,
+                align_openings=(args.drift_align == "on"),
+                hub_id=args.hub,
+                wall_gap_m=args.wall_gap_m,
+            )
+        except (FileNotFoundError, ValueError) as exc:
+            raise SystemExit(str(exc)) from exc
+        stem = f"stitched_{output['capture_id'].replace('+', '_')}_{args.tier}_{args.drift_align}"
+        json_path = _emit(output, out_dir, stem)
+    elif args.stitch_gt:
         if args.tier is None:
             raise SystemExit("--tier is required with --stitch-gt")
         room_ids = [r.strip() for r in args.stitch_gt.split(",") if r.strip()]
@@ -596,7 +728,7 @@ def main() -> None:
         json_path = _emit(output, out_dir, f"stitched_{'_'.join(room_ids)}_{args.tier}_{args.drift_align}")
     else:
         if args.input is None:
-            raise SystemExit("--input is required unless --stitch-gt or --compare is set")
+            raise SystemExit("--input is required unless --stitch-gt, --stitch-inputs, or --compare is set")
         if args.tier is None:
             raise SystemExit("--tier is required (lidar | photo | video)")
         try:

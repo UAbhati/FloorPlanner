@@ -137,8 +137,19 @@ python run.py --compare out/single_room/ out/single_room_rgb/
 
 ## Multi-room stitch
 
-I stitch from room ids in `benchmark/ground_truth.csv` (tape dims for the demo —
-not a stand-in for live SfM):
+**Live path (preferred):** run each room first, then stitch the output JSONs/dirs:
+
+```bash
+python run.py --input ./hall --tier photo --ref-length-m <L> --out out/hall
+python run.py --input ./bedroom --tier photo --ref-length-m <L> --out out/bedroom
+python run.py --input ./kitchen --tier photo --ref-length-m <L> --out out/kitchen
+python run.py --stitch-inputs out/hall,out/bedroom,out/kitchen --tier photo \
+  --hub my_room --drift-align on --out out/stitch
+```
+
+`--hub` must match a `capture_id` / room name inside those JSONs (folder name when you used `--out out/<name>`).
+
+**GT demo path (validation / drift ablation only):** room ids from `benchmark/ground_truth.csv`:
 
 ```bash
 python run.py --stitch-gt my_room,my_bedroom,my_kitchen --tier photo \
